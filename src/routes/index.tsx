@@ -22,6 +22,7 @@ import trunk from "@/assets/c-trunk.png";
 import bra from "@/assets/c-bra.png";
 import brief from "@/assets/c-brief.png";
 import panty from "@/assets/c-panty.png";
+import tee from "@/assets/c-tee.png";
 import fabric from "@/assets/fabric.jpg";
 import silkRibbon from "@/assets/silk-ribbon.jpg";
 
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Seamless, breathable innerwear by RIDOZ. Bras, briefs, boxers, panties and vests engineered for all-day comfort and confidence.",
+          "Seamless, breathable innerwear by RIDOZ. Bras, briefs, boxers, panties, vests and crew undershirts engineered for all-day comfort and confidence.",
       },
       { property: "og:title", content: "RIDOZ Style — Premium Innerwear & Loungewear" },
       {
@@ -67,6 +68,7 @@ const products: P[] = [
   { name: "Navy Classic Brief", short: "BRIEF", img: brief, tag: "Men", sw: "var(--swatch-navy)" },
   { name: "Teal High-Waist Panty", short: "PANTY", img: panty, tag: "Women", sw: "var(--swatch-teal)" },
   { name: "Ribbed Cotton Vest", short: "VEST", img: vest, tag: "Men", sw: "var(--swatch-cloud)" },
+  { name: "Classic Crew Undershirt", short: "CREW", img: tee, tag: "Men", sw: "var(--swatch-slate)" },
 ];
 const reviews = [
   { t: "Comfort You Can Feel", q: "Soft fabric that stays comfortable from morning meetings to late nights.", n: "Anjali R." },
@@ -509,7 +511,7 @@ function ProductCard({ p, i }: { p: P; i: number }) {
       exit={{ opacity: 0, scale: 0.92 }}
       transition={{ duration: 0.35, ease }}
       whileHover="hover"
-      className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-4rem)/5)] lg:max-w-none"
+      className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-5rem)/6)] lg:max-w-none"
     >
       <motion.div
         variants={{ hover: { y: -6 } }}
@@ -691,8 +693,8 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
               height={1000}
               variants={{
                 rest: { opacity: 0, y: 50, rotate: 0, x: 0 },
-                show: { opacity: 1, y: 0, rotate: o * 8, x: o * 24 },
-                hover: { opacity: 1, y: -8, rotate: o * 14, x: o * 40 },
+                show: { opacity: 1, y: 0, rotate: o * 7, x: o * 18 },
+                hover: { opacity: 1, y: -8, rotate: o * 12, x: o * 30 },
               }}
               transition={{ type: "spring", stiffness: 140, damping: 16, delay: 0.25 + k * 0.1 }}
               style={{ zIndex: 10 - Math.abs(Math.round(o * 2)) }}
@@ -707,7 +709,7 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
 
 function Collections() {
   const cols: Col[] = [
-    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Wine trunk boxer" }, { src: vest, alt: "Ribbed cotton vest" }] },
+    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Wine trunk boxer" }, { src: vest, alt: "Ribbed cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
     { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Teal high-waist panty" }] },
   ];
   return (
