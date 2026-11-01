@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="res"></div>
+<script>
+async function run() {
+  function load(src) {
+    const img = new Image();
+    img.src = src;
+    return new Promise(r => img.onload = () => r(img));
+  }
+  const imgTrunk = await load('/src/assets/p-trunk.orig.jpg');
+  const imgBrief = await load('/src/assets/p-brief.orig.jpg');
+
+  function findBand(img, x, name) {
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    const profile = [];
+    for (let y = 200; y < 450; y++) {
+      const p = ctx.getImageData(x, y, 1, 1).data;
+      profile.push({ y, rgb: [p[0], p[1], p[2]] });
+    }
+    return { name, profile };
+  }
+
+  // Trunk background is beige/tan (r~210, g~200, b~185). Boxer starts when color is wine (r~100, g~20, b~35).
+  // Brief background is light blue-grey (r~185, g~205, b~220). Band is light blue (r~100, g~170, b~230). Dark fabric (r~20, g~40, b~80).
+  const tBand = findBand(imgTrunk, 250, 'trunk');
+  const bBand = findBand(imgBrief, 240, 'brief');
+
+  let trunkTopY = 0, trunkBottomY = 0;
+  for (const p of tBand.profile) {
+    // If red is below 160, we entered the dark wine fabric!
+    if (!trunkTopY && p.rgb[0] < 160) trunkTopY = p.y;
+  }
+  // Seam is about 58px below top
+  trunkBottomY = trunkTopY + 58;
+
+  let briefTopY = 0, briefBottomY = 0;
+  for (const p of bBand.profile) {
+    // Background has r~180. The light blue front waistband starts when red drops below 160!
+    // And dark navy body starts when red drops below 50!
+    if (!briefTopY && p.rgb[0] < 155 && p.rgb[2] > 200) briefTopY = p.y;
+    if (briefTopY && !briefBottomY && p.rgb[0] < 60 && p.rgb[2] < 120) briefBottomY = p.y;
+  }
+
+  document.getElementById('res').textContent = JSON.stringify({
+    trunkTopY,
+    trunkCenterY: trunkTopY + 30,
+    briefTopY,
+    briefBottomY,
+    briefCenterY: Math.round((briefTopY + briefBottomY) / 2)
+  });
+}
+run();
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html><head></head><body>
+<img id="orig" src="/src/assets/logo-full-transparent.png">
+<canvas id="c1" width="1024" height="985"></canvas>
+<canvas id="c2" width="1024" height="985"></canvas>
+<div id="output">MATCH:89.8% (count:313637)</div>
+<script>
+window.orig.onload = () => {
+  const w = 1024, h = 985;
+  const c1 = document.getElementById('c1');
+  c1.width = w; c1.height = h;
+  const ctx1 = c1.getContext('2d');
+  ctx1.drawImage(window.orig, 0, 0);
+
+  const c2 = document.getElementById('c2');
+  c2.width = w; c2.height = h;
+  const ctx2 = c2.getContext('2d');
+
+  // Draw the SVG path:
+  // M 300.2 823.5 A 382 382 0 1 1 721.8 823.5
+  const path = new Path2D('M 300.2 823.5 A 382 382 0 1 1 721.8 823.5');
+  ctx2.lineWidth = 156;
+  ctx2.strokeStyle = '#a51538';
+  ctx2.lineCap = 'butt';
+  ctx2.stroke(path);
+
+  // Compare c1 (image ring) and c2 (path ring)
+  const d1 = ctx1.getImageData(0, 0, w, h).data;
+  const d2 = ctx2.getImageData(0, 0, w, h).data;
+
+  let totalDiff = 0, count = 0;
+  // Compare ring area (excluding the Style script area in bottom center x: 340..680, y: 760..985)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (y > 750 && x > 340 && x < 680) continue; // Skip Style area
+      const i = (y * w + x) * 4;
+      const a1 = d1[i+3], a2 = d2[i+3];
+      if (a1 > 20 || a2 > 20) {
+        totalDiff += Math.abs(a1 - a2);
+        count++;
+      }
+    }
+  }
+  const matchPercent = Math.round((1 - totalDiff / (count * 255)) * 1000) / 10;
+  document.getElementById('output').innerText = 'MATCH:' + matchPercent + '% (count:' + count + ')';
+};
+</script>
+
+</body></html>

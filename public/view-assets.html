@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>RIDOZ Style — Official Brand Assets & SEO Specification</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,600;0,700;1,600&family=Montserrat:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --bg: #FEFDF8;
+      --primary: #a51538;
+      --primary-dark: #820e29;
+      --card-bg: #FFFFFF;
+      --border: #E8E2D9;
+      --text: #261D1E;
+      --text-muted: #7A6F68;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Montserrat', sans-serif;
+      padding: 40px 24px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 {
+      font-family: 'Cormorant', serif;
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 14px;
+      background: rgba(165, 21, 56, 0.08);
+      color: var(--primary);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03);
+    }
+    .card-title {
+      font-family: 'Cormorant', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+    .preview-box {
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-height: 180px;
+    }
+    .preview-box.dark {
+      background: #1C1917;
+    }
+    .preview-box img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+    .asset-meta {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+    .asset-meta span code {
+      background: #F4EFEA;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: var(--primary);
+    }
+    .full-width-card {
+      grid-column: 1 / -1;
+    }
+    .og-preview img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    .favicon-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .fav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>RIDOZ Style</h1>
+      <span class="badge">Official Brand Asset System</span>
+      <p style="margin-top: 12px; font-size: 14px; color: var(--text-muted);">
+        Verified Brand Assets, Favicons, PWA Icons, OpenGraph Previews, and Technical SEO Configuration
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- Primary Logo (WebP / PNG) -->
+      <div class="card">
+        <h2 class="card-title">Primary Logo (Full)</h2>
+        <p class="card-subtitle">Official burgundy circular symbol + "Style" script</p>
+        <div class="preview-box">
+          <img src="/assets/brand/ridoz-logo.webp" alt="RIDOZ Style Logo" style="max-height: 120px;">
+        </div>
+        <div class="asset-meta">
+          <span>Format: <code>WebP / PNG / SVG</code></span>
+          <span>Path: <code>/assets/brand/ridoz-logo.*</code></span>
+        </div>
+      </div>
+
+      <!-- Dark Mode / Inversion Preview -->
+      <div class="card">
+        <h2 class="card-title">Dark Background Transparency</h2>
+        <p class="card-subtitle">Transparent background verification against dark luxury fill</p>
+        <div class="preview-box dark">
+          <img src="/assets/brand/ridoz-logo.png" alt="RIDOZ Style on Dark" style="max-height: 120px; filter: brightness(1.2);">
+        </div>
+        <div class="asset-meta">
+          <span>Alpha Channel: <code>100% Clean</code></span>
+          <span>Padding: <code>Balanced</code></span>
+        </div>
+      </div>
+
+      <!-- Favicon System -->
+      <div class="card">
+        <h2 class="card-title">Browser Favicons &amp; Google Search</h2>
+        <p class="card-subtitle">High-contrast burgundy circular symbol for tabs &amp; search</p>
+        <div class="preview-box">
+          <div class="favicon-row">
+            <div class="fav-item">
+              <img src="/assets/brand/favicon.svg" width="48" height="48" alt="SVG Favicon">
+              <span>SVG (Scalable)</span>
+            </div>
+            <div class="fav-item">
+              <img src="/assets/brand/favicon-32x32.png" width="32" height="32" alt="32x32 Favicon">
+              <span>32×32</span>
+            </div>
+            <div class="fav-item">
+              <img src="/assets/brand/favicon-16x16.png" width="16" height="16" alt="16x16 Favicon">
+              <span>16×16</span>
+            </div>
+            <div class="fav-item">
+              <img src="/assets/brand/apple-touch-icon.png" width="48" height="48" style="border-radius:10px;" alt="Apple Touch Icon">
+              <span>iOS 180×180</span>
+            </div>
+          </div>
+        </div>
+        <div class="asset-meta">
+          <span>Types: <code>.ico, .svg, .png</code></span>
+          <span>Google Search: <code>Supported</code></span>
+        </div>
+      </div>
+
+      <!-- PWA & Android Icons -->
+      <div class="card">
+        <h2 class="card-title">Mobile Home Screen &amp; PWA</h2>
+        <p class="card-subtitle">High-resolution icons configured in site.webmanifest</p>
+        <div class="preview-box">
+          <div class="favicon-row">
+            <div class="fav-item">
+              <img src="/assets/brand/icon-192.png" width="64" height="64" alt="PWA 192">
+              <span>icon-192.png</span>
+            </div>
+            <div class="fav-item">
+              <img src="/assets/brand/icon-512.png" width="64" height="64" alt="PWA 512">
+              <span>icon-512.png</span>
+            </div>
+            <div class="fav-item">
+              <img src="/assets/brand/apple-touch-icon.png" width="64" height="64" style="border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,0.1);" alt="Apple Touch Icon">
+              <span>apple-touch-icon</span>
+            </div>
+          </div>
+        </div>
+        <div class="asset-meta">
+          <span>Manifest: <code>site.webmanifest</code></span>
+          <span>Theme Color: <code>#a51538</code></span>
+        </div>
+      </div>
+
+      <!-- Social Sharing OpenGraph Card -->
+      <div class="card full-width-card">
+        <h2 class="card-title">Social Sharing Preview (OpenGraph &amp; Twitter Card)</h2>
+        <p class="card-subtitle">1200×630px high-resolution luxury preview for WhatsApp, Twitter/X, iMessage, Facebook, and LinkedIn</p>
+        <div class="preview-box og-preview" style="padding: 16px;">
+          <img src="/assets/brand/og-image.png" alt="OpenGraph Card Preview">
+        </div>
+        <div class="asset-meta">
+          <span>Dimension: <code>1200 × 630 px</code></span>
+          <span>Ratio: <code>1.91 : 1</code></span>
+          <span>Metadata: <code>og:image &amp; twitter:image</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

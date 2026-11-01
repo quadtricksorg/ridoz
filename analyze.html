@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<body>
+<img id="img" src="/src/assets/ridoz-style-mark.jpg">
+<canvas id="c"></canvas>
+<script>
+window.img.onload = () => {
+  const c = window.c;
+  c.width = window.img.naturalWidth;
+  c.height = window.img.naturalHeight;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(window.img, 0, 0);
+  const data = ctx.getImageData(0, 0, c.width, c.height).data;
+  
+  // Corners
+  const corners = [[10, 10], [c.width - 10, 10], [10, c.height - 10], [c.width - 10, c.height - 10]];
+  const bgColors = corners.map(([x, y]) => {
+    const i = (y * c.width + x) * 4;
+    return '#' + [data[i], data[i+1], data[i+2]].map(v => v.toString(16).padStart(2,'0')).join('');
+  });
+
+  // Find burgundy color
+  let burgundySamples = [];
+  for (let y = 30; y < 250; y++) {
+    for (let x = Math.floor(c.width/2 - 80); x < Math.floor(c.width/2 + 80); x++) {
+      const i = (y * c.width + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      if (r > 100 && g < 50 && b < 70) {
+        burgundySamples.push([r, g, b]);
+      }
+    }
+  }
+  let avgR = 0, avgG = 0, avgB = 0;
+  if (burgundySamples.length) {
+    avgR = Math.round(burgundySamples.reduce((s, c) => s + c[0], 0) / burgundySamples.length);
+    avgG = Math.round(burgundySamples.reduce((s, c) => s + c[1], 0) / burgundySamples.length);
+    avgB = Math.round(burgundySamples.reduce((s, c) => s + c[2], 0) / burgundySamples.length);
+  }
+  const burgundyHex = '#' + [avgR, avgG, avgB].map(v => v.toString(16).padStart(2,'0')).join('');
+
+  // Circle center and geometry:
+  // Circle center should be around (c.width / 2, yCenter)
+  // Let's find top of ring, bottom of ring, left of ring, right of ring
+  let topY = c.height, bottomY = 0, leftX = c.width, rightX = 0;
+  // Also Style bounding box
+  let styleTop = c.height, styleBottom = 0, styleLeft = c.width, styleRight = 0;
+
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const isBurgundy = (r > 100 && g < 50 && b < 70);
+      if (isBurgundy) {
+        if (y < 700) { // Ring part
+          if (x < leftX) leftX = x;
+          if (x > rightX) rightX = x;
+          if (y < topY) topY = y;
+          if (y > bottomY) bottomY = y;
+        } else { // Style part
+          if (x < styleLeft) styleLeft = x;
+          if (x > styleRight) styleRight = x;
+          if (y < styleTop) styleTop = y;
+          if (y > styleBottom) styleBottom = y;
+        }
+      }
+    }
+  }
+
+  // Ring thickness:
+  // Look at center top column: x = c.width / 2
+  const midX = Math.round(c.width / 2);
+  let outerTop = null, innerTop = null;
+  for (let y = 0; y < c.height / 2; y++) {
+    const i = (y * c.width + midX) * 4;
+    const isB = (data[i] > 100 && data[i+1] < 50 && data[i+2] < 70);
+    if (isB && outerTop === null) outerTop = y;
+    if (!isB && outerTop !== null && innerTop === null) innerTop = y;
+  }
+
+  console.log('---ANALYSIS_START---' + JSON.stringify({
+    width: c.width,
+    height: c.height,
+    bgColors,
+    burgundy: burgundyHex,
+    ring: { topY, bottomY, leftX, rightX, outerTop, innerTop, thickness: innerTop - outerTop },
+    style: { styleTop, styleBottom, styleLeft, styleRight }
+  }) + '---ANALYSIS_END---');
+};
+</script>
+</body>
+</html>

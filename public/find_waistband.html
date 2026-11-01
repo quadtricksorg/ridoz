@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="output"></div>
+<script>
+async function run() {
+  async function loadImg(src) {
+    const img = new Image();
+    img.src = src;
+    await new Promise(r => img.onload = r);
+    return img;
+  }
+
+  const trunkImg = await loadImg('/src/assets/c-trunk.png');
+  const briefImg = await loadImg('/src/assets/c-brief.png');
+
+  function analyze(img, name) {
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    // Find non-transparent bounds
+    const data = ctx.getImageData(0, 0, c.width, c.height).data;
+    let topY = c.height, bottomY = 0;
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const a = data[(y * c.width + x) * 4 + 3];
+        if (a > 30) {
+          if (y < topY) topY = y;
+          if (y > bottomY) bottomY = y;
+        }
+      }
+    }
+
+    // Inspect waistband: check vertical profile at x = 250, 400
+    // Waistband top is around topY. Where is the waistband bottom seam?
+    return { name, topY, bottomY, w: c.width, h: c.height };
+  }
+
+  const res = {
+    trunk: analyze(trunkImg, 'trunk'),
+    brief: analyze(briefImg, 'brief')
+  };
+
+  document.getElementById('output').textContent = JSON.stringify(res);
+}
+run();
+</script>
+</body>
+</html>

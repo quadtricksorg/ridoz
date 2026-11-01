@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+  <canvas id="cTrunk"></canvas>
+  <canvas id="cBrief"></canvas>
+  <canvas id="pTrunk"></canvas>
+  <canvas id="pBrief"></canvas>
+  <div id="output" style="display:none;"></div>
+
+<script>
+async function loadImg(src) {
+  const img = new Image();
+  img.src = src;
+  await new Promise(r => img.onload = r);
+  return img;
+}
+
+function extractWhiteLogo(logoImg) {
+  const c = document.createElement('canvas');
+  c.width = logoImg.width;
+  c.height = logoImg.height;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(logoImg, 0, 0);
+
+  const imgData = ctx.getImageData(0, 0, c.width, c.height);
+  const d = imgData.data;
+
+  let minX = c.width, minY = c.height, maxX = 0, maxY = 0;
+
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i+1], b = d[i+2];
+    const brightness = (r + g + b) / 3;
+
+    if (brightness > 18) {
+      const idx = i / 4;
+      const x = idx % c.width;
+      const y = Math.floor(idx / c.width);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      d[i] = 255;
+      d[i+1] = 255;
+      d[i+2] = 255;
+      d[i+3] = Math.min(255, Math.round(brightness * 1.05));
+    } else {
+      d[i+3] = 0;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  const cropW = maxX - minX + 1;
+  const cropH = maxY - minY + 1;
+  const cropped = document.createElement('canvas');
+  cropped.width = cropW;
+  cropped.height = cropH;
+  cropped.getContext('2d').drawImage(c, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+
+  return { canvas: cropped, w: cropW, h: cropH, aspect: cropW / cropH };
+}
+
+function applyLogo(canvas, baseImg, logo, posX, posY, angleDeg, targetH, shadowColor, alpha = 0.94) {
+  canvas.width = baseImg.width;
+  canvas.height = baseImg.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(baseImg, 0, 0);
+
+  ctx.save();
+  const angle = angleDeg * Math.PI / 180;
+  const targetW = logo.aspect * targetH;
+
+  ctx.translate(posX, posY);
+  ctx.rotate(angle);
+
+  // Soft fabric shadow for realistic screen-printed depth
+  ctx.shadowColor = shadowColor;
+  ctx.shadowBlur = 2.5;
+  ctx.shadowOffsetY = 1;
+  ctx.globalAlpha = alpha;
+
+  ctx.drawImage(logo.canvas, -targetW / 2, -targetH / 2, targetW, targetH);
+  ctx.restore();
+}
+
+async function run() {
+  const logoRaw = await loadImg('/src/assets/waistband-logo.png');
+  const logo = extractWhiteLogo(logoRaw);
+
+  // Always load from clean original backups
+  const cTrunkImg = await loadImg('/src/assets/c-trunk.orig.png');
+  const cBriefImg = await loadImg('/src/assets/c-brief.orig.png');
+  const pTrunkImg = await loadImg('/src/assets/p-trunk.orig.jpg');
+  const pBriefImg = await loadImg('/src/assets/p-brief.orig.jpg');
+
+  const cTrunk = document.getElementById('cTrunk');
+  const cBrief = document.getElementById('cBrief');
+  const pTrunk = document.getElementById('pTrunk');
+  const pBrief = document.getElementById('pBrief');
+
+  // c-trunk.png: x=246, y=260, angle=-3.5 deg, h=28
+  applyLogo(cTrunk, cTrunkImg, logo, 246, 260, -3.5, 28, 'rgba(0, 0, 0, 0.45)', 0.94);
+
+  // c-brief.png: x=240, y=276, angle=-4.5 deg, h=28
+  applyLogo(cBrief, cBriefImg, logo, 240, 276, -4.5, 28, 'rgba(10, 30, 75, 0.4)', 0.95);
+
+  // p-trunk.jpg: x=246, y=315, angle=-3.5 deg, h=28
+  applyLogo(pTrunk, pTrunkImg, logo, 246, 315, -3.5, 28, 'rgba(0, 0, 0, 0.45)', 0.94);
+
+  // p-brief.jpg: x=240, y=318, angle=-4.5 deg, h=28
+  applyLogo(pBrief, pBriefImg, logo, 240, 318, -4.5, 28, 'rgba(10, 30, 75, 0.4)', 0.95);
+
+  document.getElementById('output').textContent = JSON.stringify({
+    cTrunkPng: cTrunk.toDataURL('image/png'),
+    cBriefPng: cBrief.toDataURL('image/png'),
+    pTrunkJpg: pTrunk.toDataURL('image/jpeg', 0.96),
+    pBriefJpg: pBrief.toDataURL('image/jpeg', 0.96)
+  });
+}
+run();
+</script>
+</body>
+</html>
