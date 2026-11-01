@@ -124,7 +124,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         currentSize.textClass
       )}
     >
-      RIDOZ<span className="text-gold">.</span>
+      RIDOZ
     </span>
   );
 

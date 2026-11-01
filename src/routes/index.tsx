@@ -136,7 +136,7 @@ function Header() {
             <BrandLogo variant="full" size="md" href={null} priority={true} />
           </motion.span>
           <span className="font-display text-3xl font-bold leading-none tracking-tight text-[#a51538]">
-            RIDOZ<span className="text-gold">.</span>
+            RIDOZ
           </span>
         </a>
         <nav aria-label="Primary" className="hidden gap-8 text-sm font-medium md:flex">
@@ -361,7 +361,7 @@ function Hero() {
               transition={{ duration: 0.4, ease }}
               className="w-full"
             >
-              <p className="text-xs sm:text-sm font-semibold tracking-wider text-muted-foreground uppercase">{p.tag} · 0{i + 1}/0{products.length}</p>
+              <p className="text-xs sm:text-sm font-semibold tracking-wider text-muted-foreground uppercase">{p.tag}</p>
               <h2 className="mt-1 font-display text-2xl sm:text-3xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold tracking-tight text-foreground leading-tight">{p.name}</h2>
             </motion.div>
           </AnimatePresence>
@@ -502,11 +502,41 @@ function Marquee() {
 
 function ProductCard({ p, i }: { p: P; i: number }) {
   return (
-    <motion.article layout initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.6, delay: i * 0.08, ease }} whileHover="hover" className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-4rem)/5)] lg:max-w-none">
-      <motion.div variants={{ hover: { y: -6 } }} transition={{ duration: 0.3, ease }} className="relative overflow-hidden rounded-[1.75rem] border border-border" style={{ backgroundColor: `color-mix(in oklab, ${p.sw} 22%, var(--card))` }}>
-        <span aria-hidden className="absolute left-1/2 top-1/2 aspect-square w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 transition duration-700 group-hover:scale-110" style={{ backgroundColor: p.sw }} />
-        <span className="absolute left-3 top-3 z-10 rounded-full bg-background/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest backdrop-blur">{p.tag}</span>
-        <motion.img variants={{ hover: { scale: 1.08, rotate: -4 } }} transition={{ type: "spring", stiffness: 200, damping: 18 }} src={p.img} alt={p.name} loading="lazy" decoding="async" draggable={false} width={800} height={1000} className="drop-product relative mx-auto aspect-[4/5] w-[78%] object-contain py-6 pointer-events-none select-none" />
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 20, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.92 }}
+      transition={{ duration: 0.35, ease }}
+      whileHover="hover"
+      className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-4rem)/5)] lg:max-w-none"
+    >
+      <motion.div
+        variants={{ hover: { y: -6 } }}
+        transition={{ duration: 0.3, ease }}
+        className="relative overflow-hidden rounded-[1.75rem] border border-border"
+        style={{ backgroundColor: `color-mix(in oklab, ${p.sw} 22%, var(--card))` }}
+      >
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-1/2 aspect-square w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 transition duration-700 group-hover:scale-110"
+          style={{ backgroundColor: p.sw }}
+        />
+        <span className="absolute left-3 top-3 z-10 rounded-full bg-background/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest backdrop-blur">
+          {p.tag}
+        </span>
+        <motion.img
+          variants={{ hover: { scale: 1.08, rotate: -4 } }}
+          transition={{ type: "spring", stiffness: 200, damping: 18 }}
+          src={p.img}
+          alt={p.name}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          width={800}
+          height={1000}
+          className="drop-product relative mx-auto aspect-[4/5] w-[78%] object-contain py-6 pointer-events-none select-none"
+        />
       </motion.div>
       <div className="mt-4 px-1">
         <h3 className="min-w-0 truncate text-sm font-semibold">{p.name}</h3>
@@ -524,7 +554,7 @@ function Shop() {
   const scrollLeftPos = useRef(0);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && scrollRef.current.scrollLeft > 0) {
       scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
     }
   }, [filter]);
@@ -565,9 +595,8 @@ function Shop() {
           ))}
         </div>
       </div>
-      <motion.div
+      <div
         ref={scrollRef}
-        layout
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
@@ -575,10 +604,10 @@ function Shop() {
         style={{ WebkitOverflowScrolling: "touch" }}
         className="no-scrollbar -mx-5 mt-6 sm:mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 lg:mx-0 lg:px-0 cursor-grab active:cursor-grabbing touch-pan-x select-none overscroll-x-contain"
       >
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="sync">
           {list.map((p, k) => <ProductCard key={p.name} p={p} i={k} />)}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </section>
   );
 }
@@ -622,26 +651,34 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
       viewport={{ once: true, margin: "-60px" }}
       variants={{ rest: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0 }, hover: { opacity: 1, y: -6 } }}
       transition={{ duration: 0.8, delay: i * 0.15, ease }}
-      className="group relative flex min-h-[340px] overflow-hidden rounded-[2rem] border border-border p-7 sm:min-h-[380px] sm:p-9"
+      className="group relative flex min-h-[340px] overflow-hidden rounded-[2rem] border border-border p-6 sm:min-h-[380px] sm:p-9"
       style={{ backgroundColor: `color-mix(in oklab, ${c.tint} 24%, var(--card))` }}
     >
-      <motion.span aria-hidden variants={{ rest: { scale: 0.6, opacity: 0 }, show: { scale: 1, opacity: 1 }, hover: { scale: 1.08, opacity: 1 } }} transition={{ duration: 0.9, ease }} className="absolute -right-16 top-1/2 aspect-square w-[78%] -translate-y-1/2 rounded-full opacity-40" style={{ backgroundColor: c.tint }} />
-      <div className="relative z-10 flex flex-col justify-between">
+      <motion.span
+        aria-hidden
+        variants={{ rest: { scale: 0.6, opacity: 0 }, show: { scale: 1, opacity: 1 }, hover: { scale: 1.08, opacity: 1 } }}
+        transition={{ duration: 0.9, ease }}
+        className="pointer-events-none absolute -right-4 sm:-right-8 md:-right-4 lg:-right-12 top-1/2 aspect-square w-[58%] sm:w-[64%] md:w-[54%] lg:w-[65%] -translate-y-1/2 rounded-full opacity-40"
+        style={{ backgroundColor: c.tint }}
+      />
+      <div className="relative z-10 flex w-full max-w-[55%] sm:max-w-[52%] md:max-w-[48%] lg:max-w-[52%] flex-col justify-between">
         <div>
           <span className="font-display text-xl font-semibold text-primary [font-variant-numeric:lining-nums]">{c.n}</span>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">{c.items}</p>
+          <p className="mt-1 text-[11px] sm:text-xs font-semibold uppercase tracking-wider sm:tracking-[0.2em] text-muted-foreground leading-snug break-words">
+            {c.items}
+          </p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{c.s}</p>
-          <h3 className="mt-1 font-display text-5xl font-bold leading-none sm:text-6xl">{c.t}</h3>
-          <Magnet strength={0.4} className="mt-5">
-            <span className="btn-sweep inline-flex min-h-11 items-center gap-2 rounded-full border border-primary px-5 text-sm font-semibold text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] group-hover:text-primary-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">{c.s}</p>
+          <h3 className="mt-1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-none">{c.t}</h3>
+          <Magnet strength={0.4} className="mt-4 sm:mt-5">
+            <span className="btn-sweep inline-flex min-h-11 items-center gap-2 rounded-full border border-primary px-4 sm:px-5 text-xs sm:text-sm font-semibold text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] group-hover:text-primary-foreground">
               Shop {c.t} <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:rotate-45" />
             </span>
           </Magnet>
         </div>
       </div>
-      <motion.div style={{ x: px, y: py }} className="pointer-events-none absolute inset-y-0 right-0 w-[62%]">
+      <motion.div style={{ x: px, y: py }} className="pointer-events-none absolute inset-y-0 right-0 w-[54%] sm:w-[58%] md:w-[48%] lg:w-[56%]">
         {c.pics.map((pic, k) => {
           const o = k - mid;
           return (
@@ -654,12 +691,12 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
               height={1000}
               variants={{
                 rest: { opacity: 0, y: 50, rotate: 0, x: 0 },
-                show: { opacity: 1, y: 0, rotate: o * 9, x: o * 38 },
-                hover: { opacity: 1, y: -10, rotate: o * 15, x: o * 62 },
+                show: { opacity: 1, y: 0, rotate: o * 8, x: o * 24 },
+                hover: { opacity: 1, y: -8, rotate: o * 14, x: o * 40 },
               }}
               transition={{ type: "spring", stiffness: 140, damping: 16, delay: 0.25 + k * 0.1 }}
               style={{ zIndex: 10 - Math.abs(Math.round(o * 2)) }}
-              className="drop-product absolute left-1/2 top-1/2 w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              className="drop-product absolute left-1/2 top-1/2 w-[60%] sm:w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
             />
           );
         })}
