@@ -105,6 +105,7 @@
   --swatch-navy: oklch(0.5 0.09 255);
   --swatch-teal: oklch(0.62 0.08 190);
   --swatch-cloud: oklch(0.88 0.02 80);
+  --swatch-slate: oklch(0.5 0.05 240);
   --shadow-soft: 0 30px 60px -28px color-mix(in oklab, var(--primary) 45%, transparent);
 }
 

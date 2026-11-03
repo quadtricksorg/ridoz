@@ -30,31 +30,31 @@ export interface BrandLogoProps {
 const sizeConfig = {
   sm: {
     height: 32,
-    width: 33,
+    width: 32,
     imgClass: "h-8 w-auto",
     textClass: "text-2xl",
   },
   md: {
     height: 40,
-    width: 41,
+    width: 40,
     imgClass: "h-10 w-auto",
     textClass: "text-3xl",
   },
   lg: {
     height: 48,
-    width: 50,
+    width: 48,
     imgClass: "h-12 w-auto",
     textClass: "text-4xl",
   },
   xl: {
     height: 64,
-    width: 66,
+    width: 64,
     imgClass: "h-16 w-auto",
     textClass: "text-5xl",
   },
   custom: {
     height: 40,
-    width: 41,
+    width: 40,
     imgClass: "",
     textClass: "text-3xl",
   },
@@ -81,7 +81,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         imageClassName
       )}
       style={{
-        aspectRatio: variant === "symbol" ? "1 / 1" : "972 / 940",
+        aspectRatio: "1 / 1",
       }}
     >
       {variant === "symbol" ? (
@@ -124,7 +124,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         currentSize.textClass
       )}
     >
-      RIDOZ<span className="text-gold">.</span>
+      RIDOZ
     </span>
   );
 
