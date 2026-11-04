@@ -529,11 +529,12 @@ export function ProductShowcaseSlider() {
 
   // Single unified progress motion value used across the entire component
   const progress = useMotionValue(0);
+  const isTouchNavigatingRef = useRef(false);
 
-  // Sync scroll spring -> unified progress (except during active programmatic clicks)
+  // Sync scroll spring -> unified progress (except during active programmatic clicks or touch gesture)
   useEffect(() => {
     const unsub = springProgress.on("change", (latest) => {
-      if (Date.now() > isProgrammaticUntilRef.current) {
+      if (Date.now() > isProgrammaticUntilRef.current && !isTouchNavigatingRef.current) {
         progress.set(latest);
       }
     });
@@ -605,8 +606,8 @@ export function ProductShowcaseSlider() {
     const snapToNearestSlide = () => {
       // 1. Don't snap during active programmatic animation (clicks/prior snaps)
       if (Date.now() < isProgrammaticUntilRef.current) return;
-      // 2. Don't snap while user's finger is actively touching screen
-      if (isTouchActiveRef.current) return;
+      // 2. Don't snap while user's finger is actively touching screen or touch-navigating
+      if (isTouchActiveRef.current || isTouchNavigatingRef.current) return;
       if (!trackRef.current) return;
 
       const rect = trackRef.current.getBoundingClientRect();
@@ -717,28 +718,140 @@ export function ProductShowcaseSlider() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, goToSlide, isHovered]);
 
-  // Touch swipe support for horizontal flicks on mobile
-  const touchStartXRef = useRef(0);
-  const touchStartYRef = useRef(0);
+  // 3. MOBILE SINGLE-SLIDE TOUCH SCROLL LOCKING:
+  // When the user touch-scrolls on mobile:
+  // - A single swipe/flick gesture transitions by AT MOST ONE SLIDE.
+  // - It is clamped so that fast flings cannot skip multiple slides in a single stretch.
+  // - When touch is released, it settles exactly on that one next/previous slide.
+  // - The next image only comes on the next touch scroll.
+  // - Natural page exit is preserved when scrolling up from Slide 0 (to Hero)
+  //   or scrolling down from Slide 4 (to Marquee).
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const touchStartSlideRef = useRef(0);
+  const touchDeltaRef = useRef({ dx: 0, dy: 0 });
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
-  };
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (!slider) return;
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.changedTouches.length !== 1) return;
-    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
-    const dy = e.changedTouches[0].clientY - touchStartYRef.current;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-      if (dx < 0 && currentIndex < totalSlides - 1) {
-        goToSlide(currentIndex + 1);
-      } else if (dx > 0 && currentIndex > 0) {
-        goToSlide(currentIndex - 1);
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      touchStartPosRef.current = { x: t.clientX, y: t.clientY };
+      touchDeltaRef.current = { dx: 0, dy: 0 };
+      touchStartSlideRef.current = currentIndexRef.current;
+      isTouchNavigatingRef.current = false;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      if (!trackRef.current) return;
+
+      const rect = trackRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const isPinned = rect.top <= 25 && rect.bottom >= windowHeight - 25;
+      if (!isPinned) return;
+
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartPosRef.current.x;
+      const dy = t.clientY - touchStartPosRef.current.y;
+      touchDeltaRef.current = { dx, dy };
+
+      const startSlide = touchStartSlideRef.current;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      // Check if primary direction is vertical or horizontal
+      const isVertical = absDy >= absDx;
+
+      if (isVertical) {
+        // User swiping UP (scrolling DOWN towards next slide)
+        if (dy < -10) {
+          if (startSlide < totalSlides - 1) {
+            // Intercept and clamp gesture strictly to AT MOST startSlide + 1!
+            if (e.cancelable) e.preventDefault();
+            isTouchNavigatingRef.current = true;
+            const dragRange = Math.max(180, windowHeight * 0.32);
+            const dragProg = Math.min(1, Math.max(0, -dy / dragRange));
+            progress.set(startSlide + dragProg);
+          } else {
+            // At last slide (Slide 4): allow native page scroll down to Marquee
+            isTouchNavigatingRef.current = false;
+          }
+        }
+        // User swiping DOWN (scrolling UP towards previous slide)
+        else if (dy > 10) {
+          if (startSlide > 0) {
+            // Intercept and clamp gesture strictly to AT MOST startSlide - 1!
+            if (e.cancelable) e.preventDefault();
+            isTouchNavigatingRef.current = true;
+            const dragRange = Math.max(180, windowHeight * 0.32);
+            const dragProg = Math.min(1, Math.max(0, dy / dragRange));
+            progress.set(startSlide - dragProg);
+          } else {
+            // At first slide (Slide 0): allow native page scroll up to Hero
+            isTouchNavigatingRef.current = false;
+          }
+        }
+      } else {
+        // Horizontal swipe gesture
+        if (absDx > 12) {
+          if ((dx < 0 && startSlide < totalSlides - 1) || (dx > 0 && startSlide > 0)) {
+            if (e.cancelable) e.preventDefault();
+            isTouchNavigatingRef.current = true;
+            const dragRange = Math.max(160, window.innerWidth * 0.45);
+            const delta = -dx / dragRange;
+            const minVal = Math.max(0, startSlide - 1);
+            const maxVal = Math.min(totalSlides - 1, startSlide + 1);
+            progress.set(Math.min(maxVal, Math.max(minVal, startSlide + delta)));
+          }
+        }
       }
-    }
-  };
+    };
+
+    const onTouchEnd = () => {
+      if (!isTouchNavigatingRef.current) return;
+      isTouchNavigatingRef.current = false;
+
+      const { dx, dy } = touchDeltaRef.current;
+      const startSlide = touchStartSlideRef.current;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      let target = startSlide;
+
+      if (absDy >= absDx) {
+        // Vertical swipe
+        if (dy < -30 && startSlide < totalSlides - 1) {
+          target = startSlide + 1;
+        } else if (dy > 30 && startSlide > 0) {
+          target = startSlide - 1;
+        }
+      } else {
+        // Horizontal swipe
+        if (dx < -30 && startSlide < totalSlides - 1) {
+          target = startSlide + 1;
+        } else if (dx > 30 && startSlide > 0) {
+          target = startSlide - 1;
+        }
+      }
+
+      // Smoothly advance to exactly that one slide and stop there!
+      goToSlide(target);
+    };
+
+    slider.addEventListener("touchstart", onTouchStart, { passive: true });
+    slider.addEventListener("touchmove", onTouchMove, { passive: false });
+    slider.addEventListener("touchend", onTouchEnd, { passive: true });
+    slider.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      slider.removeEventListener("touchstart", onTouchStart);
+      slider.removeEventListener("touchmove", onTouchMove);
+      slider.removeEventListener("touchend", onTouchEnd);
+      slider.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [goToSlide, progress, totalSlides]);
 
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
@@ -772,8 +885,6 @@ export function ProductShowcaseSlider() {
         aria-roledescription="carousel"
         aria-label="Innerwear Colorway Showcase Slider"
         onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
