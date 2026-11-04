@@ -13,7 +13,7 @@ export const Route = createFileRoute("/showcase")({
 
 function ShowcasePage() {
   return (
-    <main className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+    <main className="min-h-screen w-full bg-background text-foreground overflow-x-clip">
       <ProductShowcaseSlider />
     </main>
   );
