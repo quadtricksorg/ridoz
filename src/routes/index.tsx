@@ -28,6 +28,7 @@ import silkRibbon from "@/assets/silk-ribbon.jpg";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -884,8 +885,9 @@ function Index() {
       {loading && <IntroLoader key="ridoz-intro" onComplete={() => setLoading(false)} />}
       <ScrollProgress />
       <Header />
-      <main className="overflow-x-hidden">
+      <main className="overflow-x-clip">
         <Hero />
+        <ProductShowcaseSlider />
         <Marquee />
         <Shop />
         <Collections />
