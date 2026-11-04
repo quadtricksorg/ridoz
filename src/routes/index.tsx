@@ -28,6 +28,7 @@ import silkRibbon from "@/assets/silk-ribbon.jpg";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -125,11 +126,68 @@ function Header() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
   });
-  const links = ["Drop", "Shop", "Collections", "Reviews", "Contact"];
+  const links = ["Drop", "Designs", "Shop", "Collections", "Reviews", "Contact"];
+  const [activeSection, setActiveSection] = useState("Drop");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Check if near bottom of document for Contact
+      if (
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 90
+      ) {
+        setActiveSection("Contact");
+        return;
+      }
+
+      // Check sections from bottom to top so the lowest active section wins
+      const threshold = 180;
+      for (let i = links.length - 1; i >= 0; i--) {
+        const link = links[i];
+        const el = document.getElementById(link.toLowerCase());
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= threshold) {
+            setActiveSection(link);
+            return;
+          }
+        }
+      }
+      setActiveSection("Drop");
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, l: string) => {
+    e.preventDefault();
+    setActiveSection(l);
+    const id = l.toLowerCase();
+    const el = document.getElementById(id);
+    if (el) {
+      if (id === "designs") {
+        window.scrollTo({
+          top: el.offsetTop,
+          behavior: "smooth",
+        });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      window.history.pushState(null, "", `#${id}`);
+    }
+    setOpen(false);
+  };
   return (
     <header className="fixed inset-x-0 top-4 z-50 px-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border bg-background/80 px-5 py-2.5 shadow-sm backdrop-blur-xl">
-        <a href="#drop" aria-label="RIDOZ Style, back to top" className="group flex items-center gap-2.5">
+        <a
+          href="#drop"
+          onClick={(e) => handleNavClick(e, "Drop")}
+          aria-label="RIDOZ Style, back to top"
+          className="group flex items-center gap-2.5"
+        >
           <motion.span
             whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
             transition={{ duration: 0.3 }}
@@ -143,17 +201,22 @@ function Header() {
         </a>
         <nav aria-label="Primary" className="hidden gap-8 text-sm font-medium md:flex">
           {links.map((l) => (
-            <a key={l} href={`#${l.toLowerCase()}`} className="relative flex min-h-11 items-center">
+            <a
+              key={l}
+              href={`#${l.toLowerCase()}`}
+              onClick={(e) => handleNavClick(e, l)}
+              className="relative flex min-h-11 items-center"
+            >
               <RandomLetterSwap
                 className={`cursor-pointer text-sm font-medium transition-colors duration-200 ${
-                  l === "Drop" ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
+                  activeSection === l ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
                 label={l}
                 staggerDuration={0.025}
                 transition={{ duration: 0.6, type: "spring" }}
               />
-              {l === "Drop" && (
-                <span className="absolute bottom-2.5 left-0 right-0 h-0.5 rounded-full bg-foreground" />
+              {activeSection === l && (
+                <motion.span layoutId="active-nav-indicator" transition={{ type: "spring", stiffness: 380, damping: 30 }} className="absolute bottom-2.5 left-0 right-0 h-0.5 rounded-full bg-foreground" />
               )}
             </a>
           ))}
@@ -179,15 +242,18 @@ function Header() {
               {links.map((l) => (
                 <a
                   key={l}
-                  onClick={() => setOpen(false)}
+                  onClick={(e) => handleNavClick(e, l)}
                   href={`#${l.toLowerCase()}`}
-                  className={`flex min-h-11 items-center rounded-xl px-3 text-base transition-colors duration-200 ${
-                    l === "Drop"
-                      ? "font-semibold text-foreground"
+                  className={`flex min-h-11 items-center justify-between rounded-xl px-3 text-base transition-colors duration-200 ${
+                    activeSection === l
+                      ? "font-semibold text-foreground bg-accent/30"
                       : "font-medium text-muted-foreground hover:text-foreground active:text-foreground"
                   }`}
                 >
-                  {l}
+                    <span>{l}</span>
+                    {activeSection === l && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    )}
                 </a>
               ))}
             </div>
@@ -255,11 +321,11 @@ function Hero() {
       onMouseLeave={() => { if (!isInteracting.current) { mx.set(0); my.set(0); } }}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative flex min-h-[100svh] items-center justify-center overflow-hidden pt-20 pb-6 sm:pt-28 sm:pb-12 md:h-[100svh] md:max-h-[100svh] md:pt-28 lg:pt-32 md:pb-8"
+      className="relative flex min-h-[100svh] items-center justify-center overflow-visible pt-20 pb-6 sm:pt-28 sm:pb-12 md:h-[100svh] md:max-h-[100svh] md:pt-28 lg:pt-32 md:pb-8"
     >
       <div className="grain absolute inset-0 -z-10 opacity-60" />
 
-      <div className="mx-auto grid w-full max-w-7xl items-center gap-6 px-5 sm:gap-8 sm:px-8 md:grid-cols-[1.05fr_1.3fr_1.1fr] md:items-start md:gap-8 lg:gap-12 xl:gap-14">
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-6 px-5 sm:gap-8 sm:px-8 md:px-14 lg:px-20 xl:px-24 md:grid-cols-[1.05fr_1.3fr_1.1fr] md:items-start md:gap-8 lg:gap-12 xl:gap-14">
         {/* Left Column: Headline & Action */}
         <motion.div variants={stagger} initial="hidden" animate="show" className="relative z-10 flex flex-col justify-center pt-2 md:pt-5">
           <motion.h1 variants={rise} className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.94]">
@@ -271,7 +337,15 @@ function Hero() {
           </motion.p>
           <motion.div variants={rise} className="mt-5 hidden md:block lg:mt-8">
             <Magnet strength={0.35}>
-              <a href="#shop" className="btn-sweep group inline-flex min-h-11 sm:min-h-12 items-center gap-2.5 rounded-full border border-primary px-6 text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground shadow-xs">
+              <a
+                href="#shop"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
+                  window.history.pushState(null, "", "#shop");
+                }}
+                className="btn-sweep group inline-flex min-h-11 sm:min-h-12 items-center gap-2.5 rounded-full border border-primary px-6 text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground shadow-xs"
+              >
                 Explore the drop <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
               </a>
             </Magnet>
@@ -284,7 +358,7 @@ function Hero() {
           <motion.div
             animate={{ backgroundColor: p.sw }}
             transition={{ duration: 1.1 }}
-            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[300px] sm:w-[380px] md:w-[480px] lg:w-[580px] xl:w-[650px] 2xl:w-[710px] -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden shadow-2xl opacity-95 will-change-transform border border-white/40"
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[300px] sm:w-[380px] md:w-[420px] lg:w-[500px] xl:w-[560px] 2xl:w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden shadow-2xl md:shadow-none opacity-95 will-change-transform border border-white/40"
           >
             <motion.img
               key={p.img}
@@ -547,8 +621,16 @@ function ProductCard({ p, i }: { p: P; i: number }) {
   );
 }
 
-function Shop() {
-  const [filter, setFilter] = useState("All");
+function Shop({
+  filter: controlledFilter,
+  onFilterChange,
+}: {
+  filter?: string;
+  onFilterChange?: (f: string) => void;
+} = {}) {
+  const [internalFilter, setInternalFilter] = useState("All");
+  const filter = controlledFilter !== undefined ? controlledFilter : internalFilter;
+  const setFilter = onFilterChange || setInternalFilter;
   const list = products.filter((p) => filter === "All" || p.tag === filter);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDown = useRef(false);
@@ -617,7 +699,7 @@ function Shop() {
 type Col = { t: string; s: string; n: string; items: string; tint: string; pics: { src: string; alt: string }[] };
 
 /** Fanned stack of cut-out products; spreads on hover and follows the pointer in layers. */
-function CollectionCard({ c, i }: { c: Col; i: number }) {
+function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: (category: string) => void }) {
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const px = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 18 });
@@ -639,9 +721,20 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
     my.set(0);
   };
   const mid = (c.pics.length - 1) / 2;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onSelect?.(c.t);
+    const shopEl = document.getElementById("shop");
+    if (shopEl) {
+      shopEl.scrollIntoView({ behavior: "smooth" });
+      window.history.pushState(null, "", "#shop");
+    }
+  };
   return (
     <motion.a
       href="#shop"
+      onClick={handleClick}
       aria-label={`Shop ${c.t}'s collection`}
       onMouseMove={move}
       onMouseLeave={() => { mx.set(0); my.set(0); }}
@@ -707,7 +800,7 @@ function CollectionCard({ c, i }: { c: Col; i: number }) {
   );
 }
 
-function Collections() {
+function Collections({ onSelectCollection }: { onSelectCollection?: (category: string) => void } = {}) {
   const cols: Col[] = [
     { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Wine trunk boxer" }, { src: vest, alt: "Ribbed cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
     { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Teal high-waist panty" }] },
@@ -722,7 +815,7 @@ function Collections() {
         <Reveal><p className="max-w-xs text-sm leading-relaxed text-muted-foreground">Two worlds of everyday comfort — pick yours and never look back.</p></Reveal>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {cols.map((c, i) => <CollectionCard key={c.t} c={c} i={i} />)}
+        {cols.map((c, i) => <CollectionCard key={c.t} c={c} i={i} onSelect={onSelectCollection} />)}
       </div>
     </section>
   );
@@ -860,7 +953,27 @@ function Footer() {
   );
 }
 
+if (typeof window !== "undefined") {
+  if ("scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+}
+
 function Index() {
+  const [shopFilter, setShopFilter] = useState("All");
+
+  // Always come to top on refresh or load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+    const onBeforeUnload = () => {
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   const [loading, setLoading] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -884,11 +997,12 @@ function Index() {
       {loading && <IntroLoader key="ridoz-intro" onComplete={() => setLoading(false)} />}
       <ScrollProgress />
       <Header />
-      <main className="overflow-x-hidden">
+      <main className="overflow-x-clip">
         <Hero />
+        <ProductShowcaseSlider />
         <Marquee />
-        <Shop />
-        <Collections />
+        <Shop filter={shopFilter} onFilterChange={setShopFilter} />
+        <Collections onSelectCollection={(cat) => setShopFilter(cat)} />
         <Feature />
         <Reviews />
       </main>

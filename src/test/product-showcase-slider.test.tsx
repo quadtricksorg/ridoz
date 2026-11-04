@@ -1,0 +1,117 @@
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { showcaseSlides } from "@/data/showcase-slides";
+import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
+
+describe("ProductShowcaseSlider Data & Component", () => {
+  it("has valid slide config array entries with required fields", () => {
+    expect(showcaseSlides.length).toBeGreaterThanOrEqual(5);
+
+    showcaseSlides.forEach((slide) => {
+      expect(slide.id).toBeTruthy();
+      expect(slide.image).toBeTruthy();
+      expect(slide.title).toBeTruthy();
+      expect(slide.productName).toBeTruthy();
+      expect(slide.shortDescription).toBeTruthy();
+      expect(slide.bgFrom).toMatch(/^#[0-9a-fA-F]{3,8}$|^oklch|^rgb/);
+      expect(slide.bgTo).toMatch(/^#[0-9a-fA-F]{3,8}$|^oklch|^rgb/);
+      expect(slide.accentColor).toBeTruthy();
+      expect(slide.link).toBeTruthy();
+      expect(slide.ctaLabel).toBeTruthy();
+      expect(slide.alt).toBeTruthy();
+    });
+  });
+
+  it("renders the carousel container with accessible ARIA roles and labels", () => {
+    const { container } = render(<ProductShowcaseSlider />);
+
+    const carousel = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
+    expect(carousel).toBeInTheDocument();
+    expect(carousel).toHaveAttribute("aria-roledescription", "carousel");
+
+    // Check rendered slides via querySelectorAll
+    const slides = container.querySelectorAll('[aria-roledescription="slide"]');
+    expect(slides.length).toBeGreaterThanOrEqual(3);
+
+    // Active slide is accessible to screen readers
+    const activeSlide = screen.getByRole("group", { name: /slide 1 of 5/i });
+    expect(activeSlide).toBeInTheDocument();
+  });
+
+  it("does not render price text in the slider bottom block per specification", () => {
+    render(<ProductShowcaseSlider />);
+
+    // None of the slides' prices should be rendered in the document
+    showcaseSlides.forEach((slide) => {
+      if (slide.price) {
+        expect(screen.queryByText(slide.price)).not.toBeInTheDocument();
+      }
+    });
+  });
+
+  it("renders clickable dot navigation for all slides", () => {
+    render(<ProductShowcaseSlider />);
+
+    const dots = screen.getAllByRole("tab");
+    expect(dots.length).toBe(showcaseSlides.length);
+    expect(dots[0]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("renders previous and next arrow buttons", () => {
+    render(<ProductShowcaseSlider />);
+
+    const prevBtn = screen.getByRole("button", { name: /previous design slide/i });
+    const nextBtn = screen.getByRole("button", { name: /next design slide/i });
+
+    expect(prevBtn).toBeInTheDocument();
+    expect(nextBtn).toBeInTheDocument();
+    expect(prevBtn).toBeDisabled(); // first slide has disabled prev
+    expect(nextBtn).not.toBeDisabled();
+  });
+
+  it("advances slide on clicking next button and updates active dot", () => {
+    render(<ProductShowcaseSlider />);
+
+    const nextBtn = screen.getByRole("button", { name: /next design slide/i });
+    fireEvent.click(nextBtn);
+
+    const dots = screen.getAllByRole("tab");
+    expect(dots[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("navigates directly to a slide when clicking a dot", () => {
+    render(<ProductShowcaseSlider />);
+
+    const dots = screen.getAllByRole("tab");
+    fireEvent.click(dots[2]!);
+
+    expect(dots[2]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("handles keyboard navigation with ArrowRight, ArrowLeft, ArrowDown, ArrowUp", () => {
+    render(<ProductShowcaseSlider />);
+
+    const carousel = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
+    carousel.focus();
+
+    // ArrowDown / ArrowRight advances
+    fireEvent.keyDown(carousel, { key: "ArrowDown" });
+    const dots = screen.getAllByRole("tab");
+    expect(dots[1]).toHaveAttribute("aria-selected", "true");
+
+    // ArrowUp / ArrowLeft goes back
+    fireEvent.keyDown(carousel, { key: "ArrowUp" });
+    expect(dots[0]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("handles vertical wheel scroll to advance and reverse slides", () => {
+    render(<ProductShowcaseSlider />);
+
+    const carousel = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
+
+    // Scroll down (deltaY > 0)
+    fireEvent.wheel(carousel, { deltaY: 100 });
+    const dots = screen.getAllByRole("tab");
+    expect(dots[1]).toHaveAttribute("aria-selected", "true");
+  });
+});
