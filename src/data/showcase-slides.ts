@@ -23,6 +23,8 @@ export interface ShowcaseSlide {
   bgTo: string;
   /** Exact sampled color of the bra (used for low-opacity flower animations and tones) */
   braColor: string;
+  /** Dark tone derived from the bra color, used for content card title, badge, and solid CTA button */
+  darkColor: string;
   /** Accent highlight color for badges, button glows, and active states */
   accentColor: string;
   /** Button CTA text */
@@ -41,6 +43,14 @@ export interface ShowcaseSlide {
   isTransparent?: boolean;
 }
 
+export const showcaseColorMap = {
+  "design-1": { braColor: "#b8a3c5", darkColor: "#4a2560" },
+  "design-2": { braColor: "#deceb8", darkColor: "#593e22" },
+  "design-3": { braColor: "#afcbb5", darkColor: "#1d4429" },
+  "design-4": { braColor: "#aac3da", darkColor: "#183659" },
+  "design-5": { braColor: "#eba884", darkColor: "#861c31" },
+} as const;
+
 /**
  * Single source of truth for the Product Showcase Slider.
  * To add a new design:
@@ -53,12 +63,13 @@ export const showcaseSlides: ShowcaseSlide[] = [
     image: design1,
     title: "LAVENDER",
     productName: "Lilac Cloud Wirefree Bra",
-    shortDescription: "Featherweight microfiber cups sculpted for natural lift and zero pinch.",
+    shortDescription: "Featherweight cups crafted for natural lift and zero pinch.",
     price: "₹1,499",
     // Dark plain background matching the lilac/lavender bra
     bgFrom: "#1c1322",
     bgTo: "#100a14",
     braColor: "#b8a3c5",
+    darkColor: "#4a2560",
     accentColor: "#c6b2d4",
     ctaLabel: "Shop This Look",
     link: "#shop",
@@ -71,12 +82,13 @@ export const showcaseSlides: ShowcaseSlide[] = [
     image: design2,
     title: "VANILLA",
     productName: "Champagne Bare Contour Bra",
-    shortDescription: "Ultra-smooth molded support invisible under even the lightest fabrics.",
+    shortDescription: "Ultra-smooth molded support, invisible under light fabrics.",
     price: "₹1,599",
     // Dark plain background matching the champagne nude bra
     bgFrom: "#1d1711",
     bgTo: "#110d09",
     braColor: "#deceb8",
+    darkColor: "#593e22",
     accentColor: "#e2d4c0",
     ctaLabel: "Shop This Look",
     link: "#shop",
@@ -89,12 +101,13 @@ export const showcaseSlides: ShowcaseSlide[] = [
     image: design3,
     title: "EUCALYPTUS",
     productName: "Sage Whisper Wireless Bra",
-    shortDescription: "Breathable organic modal weave featuring soft-rib support band with zero pressure.",
+    shortDescription: "Breathable modal weave with gentle, pressure-free support.",
     price: "₹1,499",
     // Dark plain background matching the eucalyptus sage mint bra
     bgFrom: "#101c14",
     bgTo: "#09110b",
     braColor: "#afcbb5",
+    darkColor: "#1d4429",
     accentColor: "#b8d2be",
     ctaLabel: "Shop This Look",
     link: "#shop",
@@ -107,12 +120,13 @@ export const showcaseSlides: ShowcaseSlide[] = [
     image: design4,
     title: "AZURE",
     productName: "Powder Sky Seamless Balconette",
-    shortDescription: "Silky double-knit microfiber with gentle side-smoothing support wings.",
+    shortDescription: "Silky microfiber with gentle side-smoothing contour wings.",
     price: "₹1,549",
     // Dark plain background matching the powder sky azure bra
     bgFrom: "#101924",
     bgTo: "#080e15",
     braColor: "#aac3da",
+    darkColor: "#183659",
     accentColor: "#b5cce0",
     ctaLabel: "Shop This Look",
     link: "#shop",
@@ -125,12 +139,13 @@ export const showcaseSlides: ShowcaseSlide[] = [
     image: design5,
     title: "TERRA",
     productName: "Rose Clay Comfort Contour Bra",
-    shortDescription: "Adaptive stretch cups that move seamlessly with your body from morning to dusk.",
+    shortDescription: "Adaptive stretch cups that move seamlessly from dawn to dusk.",
     price: "₹1,499",
     // Dark plain background matching the terracotta rose clay bra
     bgFrom: "#24130c",
     bgTo: "#140905",
     braColor: "#eba884",
+    darkColor: "#861c31",
     accentColor: "#f0b596",
     ctaLabel: "Shop This Look",
     link: "#shop",

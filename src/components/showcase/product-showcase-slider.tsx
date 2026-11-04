@@ -260,7 +260,7 @@ function SlideStationaryBraLayer({
       className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
       style={{ zIndex, clipPath, opacity }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-[38%] md:top-[42%] lg:top-[44%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[38%] sm:top-[38%] md:top-[40%] lg:top-[42%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
             !hasTransparency
@@ -274,7 +274,7 @@ function SlideStationaryBraLayer({
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
             draggable={false}
-            className="max-w-[78vw] sm:max-w-[62vw] md:max-w-[460px] lg:max-w-[520px] xl:max-w-[580px] h-auto max-h-[46vh] sm:max-h-[50vh] md:max-h-[54vh] object-contain select-none"
+            className="max-w-[76vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] h-auto max-h-[44vh] sm:max-h-[46vh] md:max-h-[50vh] object-contain select-none"
             style={{ transform: "none" }}
           />
         </div>
@@ -331,44 +331,86 @@ function ProductInfoCardItem({
   });
 
   return (
-    <motion.div
-      className="absolute z-[60] inset-x-4 bottom-14 sm:bottom-16 md:bottom-18 lg:inset-x-auto lg:left-14 xl:left-20 lg:bottom-14 lg:max-w-md will-change-[transform,opacity]"
-      style={{ opacity, y, pointerEvents }}
-    >
-      <div className="mx-auto max-w-lg lg:max-w-none text-center lg:text-left rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-6 backdrop-blur-xl shadow-soft md:shadow-xl">
-        <div className="flex items-center justify-center lg:justify-start gap-2 mb-2">
-          <span
-            className="inline-flex h-2 w-2 rounded-full"
-            style={{
-              backgroundColor: slide.braColor,
-              boxShadow: `0 0 8px ${slide.braColor}`,
-            }}
-          />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary">
-            {slide.tag || "Signature Contour"} • 0{index + 1}
-          </span>
-        </div>
+    <>
+      {/* 
+        CONTENT CARD:
+        - Mobile (< 640px): Centered at the bottom with compact padding so it fits screens cleanly.
+        - Other devices (>= 640px): Kept strictly on the LEFT side with scaled typography & padding to prevent any image overlap.
+      */}
+      <motion.div
+        className="absolute z-[60] inset-x-3 bottom-14 sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[260px] md:max-w-[290px] lg:max-w-[340px] will-change-[transform,opacity]"
+        style={{ opacity, y, pointerEvents }}
+      >
+        <div className="mx-auto max-w-sm sm:max-w-none text-center sm:text-left rounded-2xl sm:rounded-3xl border border-border/80 bg-card/90 p-4 sm:p-4 md:p-5 lg:p-6 backdrop-blur-xl shadow-soft md:shadow-lg">
+          <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-2">
+            <span
+              className="inline-flex h-2 w-2 rounded-full shrink-0"
+              style={{
+                backgroundColor: slide.darkColor,
+                boxShadow: `0 0 8px ${slide.darkColor}80`,
+              }}
+            />
+            <span
+              className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: slide.darkColor }}
+            >
+              {slide.tag || "Signature Contour"} • 0{index + 1}
+            </span>
+          </div>
 
-        <h3 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight">
-          {slide.productName}
-        </h3>
-
-        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground line-clamp-2 max-w-md mx-auto lg:mx-0 leading-relaxed font-sans">
-          {slide.shortDescription}
-        </p>
-
-        <div className="mt-4 flex items-center justify-center lg:justify-start">
-          <a
-            href={slide.link || "#shop"}
-            onClick={onExplore}
-            className="btn-sweep group inline-flex min-h-11 items-center gap-2 rounded-full border border-primary px-6 py-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wider text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground shadow-xs active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+          <h3
+            className="font-display text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight"
+            style={{ color: slide.darkColor }}
           >
-            <span>{slide.ctaLabel || "Shop This Look"}</span>
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </a>
+            {slide.productName}
+          </h3>
+
+          <p className="mt-1.5 text-xs sm:text-xs md:text-sm text-muted-foreground line-clamp-2 leading-relaxed font-sans">
+            {slide.shortDescription}
+          </p>
+
+          {/* Centered CTA button inside the card on mobile only (< 640px) */}
+          <div className="mt-3.5 flex items-center justify-center sm:hidden">
+            <a
+              href={slide.link || "#shop"}
+              onClick={onExplore}
+              style={{
+                backgroundColor: slide.darkColor,
+                color: "#ffffff",
+                boxShadow: `0 4px 14px ${slide.darkColor}40`,
+              }}
+              className="group inline-flex min-h-10 items-center gap-2 rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:brightness-110 active:scale-95 shadow-md focus-visible:ring-2 focus-visible:ring-offset-2"
+            >
+              <span>{slide.ctaLabel || "Shop This Look"}</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+            </a>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* 
+        FLOATING "SHOP THIS LOOK" BUTTON:
+        - In other devices (>= 640px), floats on the RIGHT side opposite the content card.
+      */}
+      <motion.div
+        className="hidden sm:block absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
+        style={{ opacity, y, pointerEvents }}
+      >
+        <a
+          href={slide.link || "#shop"}
+          onClick={onExplore}
+          style={{
+            backgroundColor: slide.darkColor,
+            color: "#ffffff",
+            boxShadow: `0 6px 20px ${slide.darkColor}45`,
+          }}
+          className="group inline-flex min-h-11 md:min-h-12 items-center gap-2.5 rounded-full px-5 py-2.5 md:px-6 md:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 shadow-md md:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2"
+        >
+          <span>{slide.ctaLabel || "Shop This Look"}</span>
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+        </a>
+      </motion.div>
+    </>
   );
 }
 
@@ -855,20 +897,27 @@ export function ProductShowcaseSlider() {
 
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
+    e.preventDefault();
+    const shopEl = document.getElementById("shop");
+    if (shopEl) {
+      shopEl.scrollIntoView({ behavior: "smooth" });
+      window.history.pushState(null, "", "#shop");
+    }
   };
 
   const hasNextSlide = currentIndex < totalSlides - 1;
   const hasPrevSlide = currentIndex > 0;
-  const nextSlideData = hasNextSlide ? showcaseSlides[currentIndex + 1] : null;
 
   return (
     <div
+      id="designs"
       ref={trackRef}
       className="relative w-full"
       style={{
         // 440vh total height: gives ~85vh of natural scroll distance per slide
         // Reduces scroll speed so single scrolls move gently and predictably
         height: `${Math.max(100, 100 + (totalSlides - 1) * 85)}vh`,
+        scrollMarginTop: "-6rem",
       }}
     >
       {/* 
@@ -976,29 +1025,6 @@ export function ProductShowcaseSlider() {
           </button>
         </div>
 
-        {/* Desktop Next-Slide Sliver Peek Pill */}
-        {isDesktop && nextSlideData && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              goToSlide(currentIndex + 1);
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-[70] hidden lg:flex items-center gap-3 rounded-full border border-border/80 bg-card/85 py-2 pl-3 pr-4 backdrop-blur-md text-foreground shadow-md cursor-pointer transition-all duration-300 hover:scale-105 hover:bg-card hover:border-primary group"
-            title={`Peek: Next is ${nextSlideData.productName}`}
-          >
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{
-                backgroundColor: nextSlideData.braColor,
-                boxShadow: `0 0 8px ${nextSlideData.braColor}`,
-              }}
-            />
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground/90">
-              Next: {nextSlideData.title}
-            </span>
-            <ArrowRight className="h-3.5 w-3.5 text-foreground/70 transition-transform group-hover:translate-x-1" />
-          </div>
-        )}
 
         {/* Clickable Dots Navigation */}
         <div
