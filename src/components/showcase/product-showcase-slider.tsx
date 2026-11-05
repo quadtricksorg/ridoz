@@ -198,14 +198,14 @@ function SlideTitleBounceLayer({
   return (
     <motion.div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-[26%] md:top-[30%] lg:top-[28%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
+      className="pointer-events-none absolute inset-x-0 top-[17%] sm:top-[22%] md:top-[23%] lg:top-[23%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
       style={{ x, opacity }}
     >
       <span
         className="font-sans font-black uppercase tracking-[-0.035em] leading-none whitespace-nowrap select-none max-w-[92vw] overflow-hidden"
         style={{
           // Fits within the screen width comfortably across all devices
-          fontSize: "clamp(2.2rem, 8.5vw, 6.5rem)",
+          fontSize: "clamp(1.75rem, 6.5vw, 4.75rem)",
           color: `color-mix(in oklab, ${slide.braColor} 35%, var(--foreground) 10%)`,
         }}
       >
@@ -265,7 +265,7 @@ function SlideStationaryBraLayer({
       className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
       style={{ zIndex, clipPath, opacity }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-[38%] sm:top-[38%] md:top-[40%] lg:top-[42%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[40%] sm:top-[50%] md:top-[53%] lg:top-[54%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
             !hasTransparency
@@ -279,7 +279,7 @@ function SlideStationaryBraLayer({
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
             draggable={false}
-            className="max-w-[76vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] h-auto max-h-[44vh] sm:max-h-[46vh] md:max-h-[50vh] object-contain select-none"
+            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[32vh] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none"
             style={{ transform: "none" }}
           />
         </div>
