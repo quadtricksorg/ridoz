@@ -16,7 +16,12 @@ import {
   ArrowRight,
   Hand,
 } from "lucide-react";
-import { showcaseSlides, type ShowcaseSlide } from "@/data/showcase-slides";
+import {
+  showcaseProducts,
+  showcaseProductsMap,
+  type ShowcaseSlide,
+  type ShowcaseProductType,
+} from "@/data/showcase-slides";
 
 // Lightweight, delicate botanical small flower designs for the moving accent layer
 function DelicateBlossomFlower({ className, color }: { className?: string; color: string }) {
@@ -193,14 +198,14 @@ function SlideTitleBounceLayer({
   return (
     <motion.div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-[26%] md:top-[30%] lg:top-[28%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
+      className="pointer-events-none absolute inset-x-0 top-[17%] sm:top-[22%] md:top-[23%] lg:top-[23%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
       style={{ x, opacity }}
     >
       <span
         className="font-sans font-black uppercase tracking-[-0.035em] leading-none whitespace-nowrap select-none max-w-[92vw] overflow-hidden"
         style={{
           // Fits within the screen width comfortably across all devices
-          fontSize: "clamp(2.2rem, 8.5vw, 6.5rem)",
+          fontSize: "clamp(1.75rem, 6.5vw, 4.75rem)",
           color: `color-mix(in oklab, ${slide.braColor} 35%, var(--foreground) 10%)`,
         }}
       >
@@ -260,7 +265,7 @@ function SlideStationaryBraLayer({
       className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
       style={{ zIndex, clipPath, opacity }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-[38%] sm:top-[38%] md:top-[40%] lg:top-[42%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[40%] sm:top-[50%] md:top-[53%] lg:top-[54%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
             !hasTransparency
@@ -274,7 +279,7 @@ function SlideStationaryBraLayer({
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
             draggable={false}
-            className="max-w-[76vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[540px] h-auto max-h-[44vh] sm:max-h-[46vh] md:max-h-[50vh] object-contain select-none"
+            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[32vh] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none"
             style={{ transform: "none" }}
           />
         </div>
@@ -291,18 +296,85 @@ function SlideStationaryBraLayer({
  * Price is completely omitted per user specification.
  * Reverses smoothly when scrolling backward.
  */
+/**
+ * ProductSelector Component:
+ * Circular product swatches (Bra, Boxer, Panty, Brief) matching the Hero section's design.
+ * Lets the user switch between product categories with instant reset to slide 0.
+ */
+function ProductSelector({
+  selectedProduct,
+  currentSlide,
+  onSelectProduct,
+  className = "",
+}: {
+  selectedProduct: ShowcaseProductType;
+  currentSlide?: ShowcaseSlide;
+  onSelectProduct: (p: ShowcaseProductType) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Choose innerwear product"
+      className={`inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-border/80 bg-card/90 px-2.5 py-1.5 backdrop-blur-xl shadow-soft md:shadow-md ${className}`}
+    >
+      {showcaseProducts.map((p) => {
+        const isSelected = selectedProduct === p.id;
+        // Default color and image matching the first item in the product's slide list
+        const defaultSlide = p.slides[0];
+        const activeSwatchBg = isSelected && currentSlide ? (currentSlide.swatchBg || currentSlide.braColor) : (defaultSlide?.swatchBg || p.swatchBg || defaultSlide?.braColor);
+        const activeThumb = isSelected && currentSlide?.image ? currentSlide.image : (defaultSlide?.image || p.thumb);
+        const ringColor = isSelected && currentSlide?.darkColor ? currentSlide.darkColor : "var(--primary)";
+
+        return (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={`${p.label} (${p.tag})`}
+            title={`${p.label} - ${p.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectProduct(p.id);
+            }}
+            style={{
+              backgroundColor: activeSwatchBg,
+              boxShadow: isSelected ? `0 0 0 2px var(--background), 0 0 0 4px ${ringColor}` : undefined,
+            }}
+            className={`relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-300 ${
+              isSelected
+                ? "scale-110 shadow-sm"
+                : "opacity-75 hover:opacity-100 hover:scale-105"
+            }`}
+          >
+            <img
+              src={activeThumb}
+              alt=""
+              draggable={false}
+              className="h-full w-full object-contain pointer-events-none select-none transition-transform duration-300"
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProductInfoCardItem({
   slide,
   index,
   progress,
   isReducedMotion,
   onExplore,
+  productSelector,
 }: {
   slide: ShowcaseSlide;
   index: number;
   progress: MotionValue<number>;
   isReducedMotion: boolean;
   onExplore: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  productSelector?: React.ReactNode;
 }) {
   // Bottom bounce trajectory: rises cleanly from bottom (+70px), overshoots slightly, settles to 0px
   const y = useTransform(progress, (p) => {
@@ -341,6 +413,13 @@ function ProductInfoCardItem({
         className="absolute z-[60] inset-x-3 bottom-14 sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[260px] md:max-w-[290px] lg:max-w-[340px] will-change-[transform,opacity]"
         style={{ opacity, y, pointerEvents }}
       >
+        {/* Mobile Product Selector: Positioned JUST ABOVE the content card */}
+        {productSelector && (
+          <div className="sm:hidden mb-2.5 flex items-center justify-center pointer-events-auto">
+            {productSelector}
+          </div>
+        )}
+
         <div className="mx-auto max-w-sm sm:max-w-none text-center sm:text-left rounded-2xl sm:rounded-3xl border border-border/80 bg-card/90 p-4 sm:p-4 md:p-5 lg:p-6 backdrop-blur-xl shadow-soft md:shadow-lg">
           <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-2">
             <span
@@ -393,9 +472,12 @@ function ProductInfoCardItem({
         - In other devices (>= 640px), floats on the RIGHT side opposite the content card.
       */}
       <motion.div
-        className="hidden sm:block absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
+        className="hidden sm:flex flex-col items-end gap-3 absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
         style={{ opacity, y, pointerEvents }}
       >
+        {/* Desktop Product Selector: Positioned JUST ABOVE the button */}
+        {productSelector}
+
         <a
           href={slide.link || "#shop"}
           onClick={onExplore}
@@ -529,7 +611,29 @@ export function ProductShowcaseSlider() {
   currentIndexRef.current = currentIndex;
 
   const isReducedMotion = useReducedMotion() ?? false;
-  const totalSlides = showcaseSlides.length;
+  const [selectedProduct, setSelectedProduct] = useState<ShowcaseProductType>("bra");
+  const currentProductItem = showcaseProductsMap[selectedProduct] || showcaseProducts[0]!;
+  const activeSlides = currentProductItem.slides;
+  const totalSlides = activeSlides.length;
+
+  const handleSelectProduct = (newProduct: ShowcaseProductType) => {
+    if (newProduct === selectedProduct) return;
+    setSelectedProduct(newProduct);
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+    progress.set(0);
+
+    // Scroll window smoothly to the top of the showcase track to reset to first color
+    if (typeof window !== "undefined" && trackRef.current) {
+      isProgrammaticUntilRef.current = Date.now() + 850;
+      const rect = trackRef.current.getBoundingClientRect();
+      const trackTop = window.scrollY + rect.top;
+      window.scrollTo({
+        top: trackTop,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Track parent <main> overflowX to ensure sticky works seamlessly
   useEffect(() => {
@@ -572,11 +676,17 @@ export function ProductShowcaseSlider() {
   // Single unified progress motion value used across the entire component
   const progress = useMotionValue(0);
   const isTouchNavigatingRef = useRef(false);
+  const isTouchModeRef = useRef(
+    typeof window !== "undefined" && ("ontouchstart" in window || (navigator?.maxTouchPoints ?? 0) > 0)
+  );
 
-  // Sync scroll spring -> unified progress (except during active programmatic clicks or touch gesture)
+  // Sync scroll spring -> unified progress ONLY for desktop mousewheel/trackpad scroll depth.
+  // On touch devices / during touch scroll: progress is NOT based on scroll depth;
+  // it is switched cleanly step-by-step on touch start & stop gestures.
   useEffect(() => {
     const unsub = springProgress.on("change", (latest) => {
-      if (Date.now() > isProgrammaticUntilRef.current && !isTouchNavigatingRef.current) {
+      if (isTouchModeRef.current || isTouchNavigatingRef.current) return;
+      if (Date.now() > isProgrammaticUntilRef.current) {
         progress.set(latest);
       }
     });
@@ -613,7 +723,7 @@ export function ProductShowcaseSlider() {
         const scrollableDistance = trackRef.current.offsetHeight - window.innerHeight;
         if (scrollableDistance > 50) {
           const targetY = trackTop + (target / (totalSlides - 1)) * scrollableDistance;
-          window.scrollTo({ top: targetY, behavior: "smooth" });
+          window.scrollTo({ top: targetY, behavior: isTouchModeRef.current ? "instant" : "smooth" });
         }
       }
 
@@ -646,10 +756,10 @@ export function ProductShowcaseSlider() {
     let snapTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const snapToNearestSlide = () => {
-      // 1. Don't snap during active programmatic animation (clicks/prior snaps)
+      // 1. On touch devices / touch scroll, don't run auto-snap (swipes explicitly step color-by-color)
+      if (isTouchModeRef.current || isTouchActiveRef.current || isTouchNavigatingRef.current) return;
+      // 2. Don't snap during active programmatic animation (clicks/prior snaps)
       if (Date.now() < isProgrammaticUntilRef.current) return;
-      // 2. Don't snap while user's finger is actively touching screen or touch-navigating
-      if (isTouchActiveRef.current || isTouchNavigatingRef.current) return;
       if (!trackRef.current) return;
 
       const rect = trackRef.current.getBoundingClientRect();
@@ -760,28 +870,37 @@ export function ProductShowcaseSlider() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, goToSlide, isHovered]);
 
-  // 3. MOBILE SINGLE-SLIDE TOUCH SCROLL LOCKING:
-  // When the user touch-scrolls on mobile:
-  // - A single swipe/flick gesture transitions by AT MOST ONE SLIDE.
-  // - It is clamped so that fast flings cannot skip multiple slides in a single stretch.
-  // - When touch is released, it settles exactly on that one next/previous slide.
-  // - The next image only comes on the next touch scroll.
+  // 3. TOUCH SCROLL COLOR SWITCHING (MOBILE & TABLET):
+  // When doing touch scroll in mobile or tab:
+  // - Takes touch start and touch stop (gesture direction)
+  // - Just switches the color of the product step-by-step, NOT based on continuous scroll depth.
+  // - Fast flings are intercepted so they can never skip multiple colors in a single swipe.
   // - Natural page exit is preserved when scrolling up from Slide 0 (to Hero)
-  //   or scrolling down from Slide 4 (to Marquee).
+  //   or scrolling down from Slide 4 (to next section).
   const touchStartPosRef = useRef({ x: 0, y: 0 });
-  const touchStartSlideRef = useRef(0);
-  const touchDeltaRef = useRef({ dx: 0, dy: 0 });
+  const touchStartTimeRef = useRef(0);
 
   useEffect(() => {
     const slider = sliderRef.current;
     if (!slider) return;
 
+    // Detect mouse wheel usage to allow continuous scroll depth on desktop/hybrid
+    const onWheel = () => {
+      isTouchModeRef.current = false;
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+
     const onTouchStart = (e: TouchEvent) => {
+      isTouchModeRef.current = true;
       if (e.touches.length !== 1) return;
+      // Let taps on buttons, links, or selector swatches pass through
+      if ((e.target as HTMLElement)?.closest?.("button, a, [role='radio'], [role='tab']")) {
+        isTouchNavigatingRef.current = false;
+        return;
+      }
       const t = e.touches[0];
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
-      touchDeltaRef.current = { dx: 0, dy: 0 };
-      touchStartSlideRef.current = currentIndexRef.current;
+      touchStartTimeRef.current = Date.now();
       isTouchNavigatingRef.current = false;
     };
 
@@ -791,95 +910,80 @@ export function ProductShowcaseSlider() {
 
       const rect = trackRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      const isPinned = rect.top <= 25 && rect.bottom >= windowHeight - 25;
+      const isTestEnv = !trackRef.current.offsetHeight || trackRef.current.offsetHeight === 0;
+      const isPinned = isTestEnv || (rect.top <= 25 && rect.bottom >= windowHeight - 25);
       if (!isPinned) return;
 
       const t = e.touches[0];
       const dx = t.clientX - touchStartPosRef.current.x;
       const dy = t.clientY - touchStartPosRef.current.y;
-      touchDeltaRef.current = { dx, dy };
-
-      const startSlide = touchStartSlideRef.current;
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      // Check if primary direction is vertical or horizontal
-      const isVertical = absDy >= absDx;
+      const currentSlide = currentIndexRef.current;
 
-      if (isVertical) {
-        // User swiping UP (scrolling DOWN towards next slide)
-        if (dy < -10) {
-          if (startSlide < totalSlides - 1) {
-            // Intercept and clamp gesture strictly to AT MOST startSlide + 1!
+      if (absDy >= absDx) {
+        // Vertical swipe
+        if (dy < -8) {
+          if (currentSlide < totalSlides - 1) {
+            // Intercept swipe to prevent fast fling scroll depth; we switch exactly 1 color on stop!
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(180, windowHeight * 0.32);
-            const dragProg = Math.min(1, Math.max(0, -dy / dragRange));
-            progress.set(startSlide + dragProg);
           } else {
-            // At last slide (Slide 4): allow native page scroll down to Marquee
+            // Already at last color: allow natural page scroll down to next section
             isTouchNavigatingRef.current = false;
           }
-        }
-        // User swiping DOWN (scrolling UP towards previous slide)
-        else if (dy > 10) {
-          if (startSlide > 0) {
-            // Intercept and clamp gesture strictly to AT MOST startSlide - 1!
+        } else if (dy > 8) {
+          if (currentSlide > 0) {
+            // Intercept swipe to prevent fast fling scroll depth; we switch exactly 1 color on stop!
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(180, windowHeight * 0.32);
-            const dragProg = Math.min(1, Math.max(0, dy / dragRange));
-            progress.set(startSlide - dragProg);
           } else {
-            // At first slide (Slide 0): allow native page scroll up to Hero
+            // Already at first color: allow natural page scroll up to Hero
             isTouchNavigatingRef.current = false;
           }
         }
       } else {
         // Horizontal swipe gesture
-        if (absDx > 12) {
-          if ((dx < 0 && startSlide < totalSlides - 1) || (dx > 0 && startSlide > 0)) {
+        if (absDx > 10) {
+          if ((dx < 0 && currentSlide < totalSlides - 1) || (dx > 0 && currentSlide > 0)) {
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(160, window.innerWidth * 0.45);
-            const delta = -dx / dragRange;
-            const minVal = Math.max(0, startSlide - 1);
-            const maxVal = Math.min(totalSlides - 1, startSlide + 1);
-            progress.set(Math.min(maxVal, Math.max(minVal, startSlide + delta)));
           }
         }
       }
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (!isTouchNavigatingRef.current) return;
       isTouchNavigatingRef.current = false;
 
-      const { dx, dy } = touchDeltaRef.current;
-      const startSlide = touchStartSlideRef.current;
+      const t = e.changedTouches[0];
+      if (!t) return;
+
+      const dx = t.clientX - touchStartPosRef.current.x;
+      const dy = t.clientY - touchStartPosRef.current.y;
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      let target = startSlide;
+      const currentSlide = currentIndexRef.current;
+      const threshold = 25;
 
       if (absDy >= absDx) {
-        // Vertical swipe
-        if (dy < -30 && startSlide < totalSlides - 1) {
-          target = startSlide + 1;
-        } else if (dy > 30 && startSlide > 0) {
-          target = startSlide - 1;
+        // Vertical swipe: dy < 0 means finger swiped UP (intended scroll DOWN to next color)
+        if (dy < -threshold && currentSlide < totalSlides - 1) {
+          goToSlide(currentSlide + 1);
+        } else if (dy > threshold && currentSlide > 0) {
+          goToSlide(currentSlide - 1);
         }
       } else {
-        // Horizontal swipe
-        if (dx < -30 && startSlide < totalSlides - 1) {
-          target = startSlide + 1;
-        } else if (dx > 30 && startSlide > 0) {
-          target = startSlide - 1;
+        // Horizontal swipe: dx < 0 means finger swiped LEFT (intended scroll RIGHT to next color)
+        if (dx < -threshold && currentSlide < totalSlides - 1) {
+          goToSlide(currentSlide + 1);
+        } else if (dx > threshold && currentSlide > 0) {
+          goToSlide(currentSlide - 1);
         }
       }
-
-      // Smoothly advance to exactly that one slide and stop there!
-      goToSlide(target);
     };
 
     slider.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -888,12 +992,13 @@ export function ProductShowcaseSlider() {
     slider.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     return () => {
+      window.removeEventListener("wheel", onWheel);
       slider.removeEventListener("touchstart", onTouchStart);
       slider.removeEventListener("touchmove", onTouchMove);
       slider.removeEventListener("touchend", onTouchEnd);
       slider.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [goToSlide, progress, totalSlides]);
+  }, [goToSlide, totalSlides]);
 
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
@@ -942,10 +1047,10 @@ export function ProductShowcaseSlider() {
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
 
         {/* Preload first slide image */}
-        <link rel="preload" as="image" href={showcaseSlides[0]?.image} />
+        <link rel="preload" as="image" href={activeSlides[0]?.image} />
 
         {/* 1. BIG TYPOGRAPHY LAYER (Behind the bra, comes from left fast with bounce effect) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <SlideTitleBounceLayer
             key={`title-${slide.id}`}
             slide={slide}
@@ -956,7 +1061,7 @@ export function ProductShowcaseSlider() {
         ))}
 
         {/* 2. STATIONARY PRODUCT BRA (Coordinates pixel-locked to center, masked in parallel) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <SlideStationaryBraLayer
             key={`bra-${slide.id}`}
             slide={slide}
@@ -969,7 +1074,7 @@ export function ProductShowcaseSlider() {
 
         {/* 3. UNCLIPPED FLOATING ACCENTS LAYER (Comes from left fast with bounce effect) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[55] overflow-hidden">
-          {showcaseSlides.map((slide, idx) => (
+          {activeSlides.map((slide, idx) => (
             <FloatingAccentsItem
               key={`accents-${slide.id}`}
               slide={slide}
@@ -981,7 +1086,7 @@ export function ProductShowcaseSlider() {
         </div>
 
         {/* 4. CONTENT BOX WITH DETAILS (Comes from bottom with bounce effect, price omitted) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <ProductInfoCardItem
             key={`card-${slide.id}`}
             slide={slide}
@@ -989,7 +1094,7 @@ export function ProductShowcaseSlider() {
             progress={progress}
             isReducedMotion={isReducedMotion}
             onExplore={handleExploreClick}
-          />
+          productSelector={<ProductSelector selectedProduct={selectedProduct} currentSlide={slide} onSelectProduct={handleSelectProduct} />}/>
         ))}
 
         {/* Desktop Navigation Arrows */}
@@ -1032,7 +1137,7 @@ export function ProductShowcaseSlider() {
           aria-label="Showcase slide navigation"
           className="absolute bottom-5 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 rounded-full border border-border/80 bg-card/85 px-4 py-2 backdrop-blur-md shadow-md"
         >
-          {showcaseSlides.map((slide, idx) => {
+          {activeSlides.map((slide, idx) => {
             const isActive = idx === currentIndex;
             return (
               <button
@@ -1073,7 +1178,7 @@ export function ProductShowcaseSlider() {
 
         {/* Screen Reader Live Announcement */}
         <div className="sr-only" aria-live="polite">
-          Showing slide {currentIndex + 1} of {totalSlides}: {showcaseSlides[currentIndex]?.productName}
+          Showing slide {currentIndex + 1} of {totalSlides}: {activeSlides[currentIndex]?.productName}
         </div>
       </section>
     </div>

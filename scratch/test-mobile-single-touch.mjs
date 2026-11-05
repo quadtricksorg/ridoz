@@ -6,13 +6,13 @@ async function testMobileSingleTouch() {
   const chrome = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
     `--remote-debugging-port=${p}`,
     '--headless=new',
-    'http://localhost:8081/?no_intro=1'
+    'http://localhost:8080/?no_intro=1'
   ]);
 
   try {
     await new Promise(r => setTimeout(r, 2200));
     const res = await (await fetch(`http://127.0.0.1:${p}/json`)).json();
-    const tab = res.find(t => t.url.includes('localhost:8081'));
+    const tab = res.find(t => t.url.includes('localhost:8080'));
     if (!tab) throw new Error('No tab found');
 
     const ws = new (await import('ws')).default(tab.webSocketDebuggerUrl);
