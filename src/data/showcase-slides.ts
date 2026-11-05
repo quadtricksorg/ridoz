@@ -453,16 +453,16 @@ export const briefSlides: ShowcaseSlide[] = [
 export const showcaseProducts: ShowcaseProductItem[] = [
   {
     id: "bra",
-    name: "Caramel Comfort Bra",
+    name: "Lilac Cloud Wirefree Bra",
     label: "Bra",
     tag: "Women",
-    swatchBg: "var(--swatch-sand, #deceb8)",
+    swatchBg: "#b8a3c5",
     thumb: thumbBra,
     slides: braSlides,
   },
   {
     id: "boxer",
-    name: "Wine Trunk Boxer",
+    name: "Burgundy Velvet Flex Boxer",
     label: "Boxer",
     tag: "Men",
     swatchBg: "#651C2D",
@@ -471,7 +471,7 @@ export const showcaseProducts: ShowcaseProductItem[] = [
   },
   {
     id: "panty",
-    name: "Teal High-Waist Panty",
+    name: "Lilac Cloud Seamless Panty",
     label: "Panty",
     tag: "Women",
     swatchBg: "#b8a3c5",
@@ -480,7 +480,7 @@ export const showcaseProducts: ShowcaseProductItem[] = [
   },
   {
     id: "brief",
-    name: "Navy Classic Brief",
+    name: "Stealth Black Classic Brief",
     label: "Brief",
     tag: "Men",
     swatchBg: "#232323",

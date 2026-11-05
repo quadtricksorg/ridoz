@@ -303,10 +303,12 @@ function SlideStationaryBraLayer({
  */
 function ProductSelector({
   selectedProduct,
+  currentSlide,
   onSelectProduct,
   className = "",
 }: {
   selectedProduct: ShowcaseProductType;
+  currentSlide?: ShowcaseSlide;
   onSelectProduct: (p: ShowcaseProductType) => void;
   className?: string;
 }) {
@@ -318,6 +320,12 @@ function ProductSelector({
     >
       {showcaseProducts.map((p) => {
         const isSelected = selectedProduct === p.id;
+        // Default color and image matching the first item in the product's slide list
+        const defaultSlide = p.slides[0];
+        const activeSwatchBg = isSelected && currentSlide?.braColor ? currentSlide.braColor : (defaultSlide?.braColor || p.swatchBg);
+        const activeThumb = isSelected && currentSlide?.image ? currentSlide.image : (defaultSlide?.image || p.thumb);
+        const ringColor = isSelected && currentSlide?.darkColor ? currentSlide.darkColor : "var(--primary)";
+
         return (
           <button
             key={p.id}
@@ -330,18 +338,21 @@ function ProductSelector({
               e.stopPropagation();
               onSelectProduct(p.id);
             }}
-            style={{ backgroundColor: p.swatchBg }}
-            className={`relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-200 ${
+            style={{
+              backgroundColor: activeSwatchBg,
+              boxShadow: isSelected ? `0 0 0 2px var(--background), 0 0 0 4px ${ringColor}` : undefined,
+            }}
+            className={`relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-300 ${
               isSelected
-                ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-sm"
+                ? "scale-110 shadow-sm"
                 : "opacity-75 hover:opacity-100 hover:scale-105"
             }`}
           >
             <img
-              src={p.thumb}
+              src={activeThumb}
               alt=""
               draggable={false}
-              className="h-full w-full object-contain pointer-events-none select-none"
+              className="h-full w-full object-contain pointer-events-none select-none transition-transform duration-300"
             />
           </button>
         );
@@ -1083,7 +1094,7 @@ export function ProductShowcaseSlider() {
             progress={progress}
             isReducedMotion={isReducedMotion}
             onExplore={handleExploreClick}
-          productSelector={<ProductSelector selectedProduct={selectedProduct} onSelectProduct={handleSelectProduct} />}/>
+          productSelector={<ProductSelector selectedProduct={selectedProduct} currentSlide={slide} onSelectProduct={handleSelectProduct} />}/>
         ))}
 
         {/* Desktop Navigation Arrows */}
