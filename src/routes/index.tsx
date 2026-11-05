@@ -62,6 +62,10 @@ export const Route = createFileRoute("/")({
 
 const PHONE = "+91 7510441075";
 const TEL = `tel:${PHONE.replace(/\s/g, "")}`;
+const WHATSAPP_NUMBER = PHONE.replace(/\D/g, "");
+const WHATSAPP_ENQUIRY_MESSAGE =
+  "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
+const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
 type P = { name: string; short: string; img: string; tag: string; sw: string };
 const products: P[] = [
   { name: "Wine Trunk Boxer", short: "TRUNK", img: trunk, tag: "Men", sw: "var(--swatch-wine)" },
@@ -223,7 +227,7 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Magnet className="hidden sm:inline-flex" strength={0.25}>
-            <a href={TEL} className="btn-sweep inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors duration-300 hover:text-accent-foreground">{PHONE}</a>
+            <a href={WHATSAPP_ENQUIRY_URL} target="_blank" rel="noopener noreferrer" className="btn-sweep inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors duration-300 hover:text-accent-foreground">Enquiry</a>
           </Magnet>
           <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full md:hidden">{open ? <X /> : <Menu />}</button>
         </div>
@@ -258,10 +262,12 @@ function Header() {
               ))}
             </div>
             <a
-              href={TEL}
+              href={WHATSAPP_ENQUIRY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-2 flex min-h-12 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm transition-opacity active:opacity-90"
             >
-              {PHONE}
+              Enquiry
             </a>
           </motion.nav>
         )}

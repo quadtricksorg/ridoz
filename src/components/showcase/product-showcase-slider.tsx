@@ -16,7 +16,12 @@ import {
   ArrowRight,
   Hand,
 } from "lucide-react";
-import { showcaseSlides, type ShowcaseSlide } from "@/data/showcase-slides";
+import {
+  showcaseProducts,
+  showcaseProductsMap,
+  type ShowcaseSlide,
+  type ShowcaseProductType,
+} from "@/data/showcase-slides";
 
 // Lightweight, delicate botanical small flower designs for the moving accent layer
 function DelicateBlossomFlower({ className, color }: { className?: string; color: string }) {
@@ -291,18 +296,74 @@ function SlideStationaryBraLayer({
  * Price is completely omitted per user specification.
  * Reverses smoothly when scrolling backward.
  */
+/**
+ * ProductSelector Component:
+ * Circular product swatches (Bra, Boxer, Panty, Brief) matching the Hero section's design.
+ * Lets the user switch between product categories with instant reset to slide 0.
+ */
+function ProductSelector({
+  selectedProduct,
+  onSelectProduct,
+  className = "",
+}: {
+  selectedProduct: ShowcaseProductType;
+  onSelectProduct: (p: ShowcaseProductType) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Choose innerwear product"
+      className={`inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-border/80 bg-card/90 px-2.5 py-1.5 backdrop-blur-xl shadow-soft md:shadow-md ${className}`}
+    >
+      {showcaseProducts.map((p) => {
+        const isSelected = selectedProduct === p.id;
+        return (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={`${p.label} (${p.tag})`}
+            title={`${p.label} - ${p.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectProduct(p.id);
+            }}
+            style={{ backgroundColor: p.swatchBg }}
+            className={`relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-200 ${
+              isSelected
+                ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-sm"
+                : "opacity-75 hover:opacity-100 hover:scale-105"
+            }`}
+          >
+            <img
+              src={p.thumb}
+              alt=""
+              draggable={false}
+              className="h-full w-full object-contain pointer-events-none select-none"
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProductInfoCardItem({
   slide,
   index,
   progress,
   isReducedMotion,
   onExplore,
+  productSelector,
 }: {
   slide: ShowcaseSlide;
   index: number;
   progress: MotionValue<number>;
   isReducedMotion: boolean;
   onExplore: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  productSelector?: React.ReactNode;
 }) {
   // Bottom bounce trajectory: rises cleanly from bottom (+70px), overshoots slightly, settles to 0px
   const y = useTransform(progress, (p) => {
@@ -341,6 +402,13 @@ function ProductInfoCardItem({
         className="absolute z-[60] inset-x-3 bottom-14 sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[260px] md:max-w-[290px] lg:max-w-[340px] will-change-[transform,opacity]"
         style={{ opacity, y, pointerEvents }}
       >
+        {/* Mobile Product Selector: Positioned JUST ABOVE the content card */}
+        {productSelector && (
+          <div className="sm:hidden mb-2.5 flex items-center justify-center pointer-events-auto">
+            {productSelector}
+          </div>
+        )}
+
         <div className="mx-auto max-w-sm sm:max-w-none text-center sm:text-left rounded-2xl sm:rounded-3xl border border-border/80 bg-card/90 p-4 sm:p-4 md:p-5 lg:p-6 backdrop-blur-xl shadow-soft md:shadow-lg">
           <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-2">
             <span
@@ -393,9 +461,12 @@ function ProductInfoCardItem({
         - In other devices (>= 640px), floats on the RIGHT side opposite the content card.
       */}
       <motion.div
-        className="hidden sm:block absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
+        className="hidden sm:flex flex-col items-end gap-3 absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
         style={{ opacity, y, pointerEvents }}
       >
+        {/* Desktop Product Selector: Positioned JUST ABOVE the button */}
+        {productSelector}
+
         <a
           href={slide.link || "#shop"}
           onClick={onExplore}
@@ -529,7 +600,29 @@ export function ProductShowcaseSlider() {
   currentIndexRef.current = currentIndex;
 
   const isReducedMotion = useReducedMotion() ?? false;
-  const totalSlides = showcaseSlides.length;
+  const [selectedProduct, setSelectedProduct] = useState<ShowcaseProductType>("bra");
+  const currentProductItem = showcaseProductsMap[selectedProduct] || showcaseProducts[0]!;
+  const activeSlides = currentProductItem.slides;
+  const totalSlides = activeSlides.length;
+
+  const handleSelectProduct = (newProduct: ShowcaseProductType) => {
+    if (newProduct === selectedProduct) return;
+    setSelectedProduct(newProduct);
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+    progress.set(0);
+
+    // Scroll window smoothly to the top of the showcase track to reset to first color
+    if (typeof window !== "undefined" && trackRef.current) {
+      isProgrammaticUntilRef.current = Date.now() + 850;
+      const rect = trackRef.current.getBoundingClientRect();
+      const trackTop = window.scrollY + rect.top;
+      window.scrollTo({
+        top: trackTop,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Track parent <main> overflowX to ensure sticky works seamlessly
   useEffect(() => {
@@ -942,10 +1035,10 @@ export function ProductShowcaseSlider() {
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
 
         {/* Preload first slide image */}
-        <link rel="preload" as="image" href={showcaseSlides[0]?.image} />
+        <link rel="preload" as="image" href={activeSlides[0]?.image} />
 
         {/* 1. BIG TYPOGRAPHY LAYER (Behind the bra, comes from left fast with bounce effect) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <SlideTitleBounceLayer
             key={`title-${slide.id}`}
             slide={slide}
@@ -956,7 +1049,7 @@ export function ProductShowcaseSlider() {
         ))}
 
         {/* 2. STATIONARY PRODUCT BRA (Coordinates pixel-locked to center, masked in parallel) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <SlideStationaryBraLayer
             key={`bra-${slide.id}`}
             slide={slide}
@@ -969,7 +1062,7 @@ export function ProductShowcaseSlider() {
 
         {/* 3. UNCLIPPED FLOATING ACCENTS LAYER (Comes from left fast with bounce effect) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[55] overflow-hidden">
-          {showcaseSlides.map((slide, idx) => (
+          {activeSlides.map((slide, idx) => (
             <FloatingAccentsItem
               key={`accents-${slide.id}`}
               slide={slide}
@@ -981,7 +1074,7 @@ export function ProductShowcaseSlider() {
         </div>
 
         {/* 4. CONTENT BOX WITH DETAILS (Comes from bottom with bounce effect, price omitted) */}
-        {showcaseSlides.map((slide, idx) => (
+        {activeSlides.map((slide, idx) => (
           <ProductInfoCardItem
             key={`card-${slide.id}`}
             slide={slide}
@@ -989,7 +1082,7 @@ export function ProductShowcaseSlider() {
             progress={progress}
             isReducedMotion={isReducedMotion}
             onExplore={handleExploreClick}
-          />
+          productSelector={<ProductSelector selectedProduct={selectedProduct} onSelectProduct={handleSelectProduct} />}/>
         ))}
 
         {/* Desktop Navigation Arrows */}
@@ -1032,7 +1125,7 @@ export function ProductShowcaseSlider() {
           aria-label="Showcase slide navigation"
           className="absolute bottom-5 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 rounded-full border border-border/80 bg-card/85 px-4 py-2 backdrop-blur-md shadow-md"
         >
-          {showcaseSlides.map((slide, idx) => {
+          {activeSlides.map((slide, idx) => {
             const isActive = idx === currentIndex;
             return (
               <button
@@ -1073,7 +1166,7 @@ export function ProductShowcaseSlider() {
 
         {/* Screen Reader Live Announcement */}
         <div className="sr-only" aria-live="polite">
-          Showing slide {currentIndex + 1} of {totalSlides}: {showcaseSlides[currentIndex]?.productName}
+          Showing slide {currentIndex + 1} of {totalSlides}: {activeSlides[currentIndex]?.productName}
         </div>
       </section>
     </div>
