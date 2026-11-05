@@ -322,7 +322,7 @@ function ProductSelector({
         const isSelected = selectedProduct === p.id;
         // Default color and image matching the first item in the product's slide list
         const defaultSlide = p.slides[0];
-        const activeSwatchBg = isSelected && currentSlide?.braColor ? currentSlide.braColor : (defaultSlide?.braColor || p.swatchBg);
+        const activeSwatchBg = isSelected && currentSlide ? (currentSlide.swatchBg || currentSlide.braColor) : (defaultSlide?.swatchBg || p.swatchBg || defaultSlide?.braColor);
         const activeThumb = isSelected && currentSlide?.image ? currentSlide.image : (defaultSlide?.image || p.thumb);
         const ringColor = isSelected && currentSlide?.darkColor ? currentSlide.darkColor : "var(--primary)";
 
