@@ -150,4 +150,29 @@ describe("ProductShowcaseSlider Data & Component", () => {
     const live = screen.getByText(/showing slide 1 of 5:.*boxer/i);
     expect(live).toBeInTheDocument();
   });
+
+  it("switches color slide on touch swipe gesture (touchstart + touchend)", () => {
+    render(<ProductShowcaseSlider />);
+    const slider = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
+
+    // Initial dot 0 is selected
+    const dots = screen.getAllByRole("tab");
+    expect(dots[0]).toHaveAttribute("aria-selected", "true");
+
+    // Simulate vertical swipe UP (finger moves from y=300 to y=100) -> advance to next slide
+    fireEvent.touchStart(slider, {
+      touches: [{ clientX: 100, clientY: 300 }],
+    });
+    fireEvent.touchMove(slider, {
+      touches: [{ clientX: 100, clientY: 100 }],
+      cancelable: true,
+    });
+    fireEvent.touchEnd(slider, {
+      changedTouches: [{ clientX: 100, clientY: 100 }],
+    });
+
+    // Dot 1 should now be selected
+    const updatedDots = screen.getAllByRole("tab");
+    expect(updatedDots[1]).toHaveAttribute("aria-selected", "true");
+  });
 });

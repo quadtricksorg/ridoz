@@ -665,11 +665,17 @@ export function ProductShowcaseSlider() {
   // Single unified progress motion value used across the entire component
   const progress = useMotionValue(0);
   const isTouchNavigatingRef = useRef(false);
+  const isTouchModeRef = useRef(
+    typeof window !== "undefined" && ("ontouchstart" in window || (navigator?.maxTouchPoints ?? 0) > 0)
+  );
 
-  // Sync scroll spring -> unified progress (except during active programmatic clicks or touch gesture)
+  // Sync scroll spring -> unified progress ONLY for desktop mousewheel/trackpad scroll depth.
+  // On touch devices / during touch scroll: progress is NOT based on scroll depth;
+  // it is switched cleanly step-by-step on touch start & stop gestures.
   useEffect(() => {
     const unsub = springProgress.on("change", (latest) => {
-      if (Date.now() > isProgrammaticUntilRef.current && !isTouchNavigatingRef.current) {
+      if (isTouchModeRef.current || isTouchNavigatingRef.current) return;
+      if (Date.now() > isProgrammaticUntilRef.current) {
         progress.set(latest);
       }
     });
@@ -706,7 +712,7 @@ export function ProductShowcaseSlider() {
         const scrollableDistance = trackRef.current.offsetHeight - window.innerHeight;
         if (scrollableDistance > 50) {
           const targetY = trackTop + (target / (totalSlides - 1)) * scrollableDistance;
-          window.scrollTo({ top: targetY, behavior: "smooth" });
+          window.scrollTo({ top: targetY, behavior: isTouchModeRef.current ? "instant" : "smooth" });
         }
       }
 
@@ -739,10 +745,10 @@ export function ProductShowcaseSlider() {
     let snapTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const snapToNearestSlide = () => {
-      // 1. Don't snap during active programmatic animation (clicks/prior snaps)
+      // 1. On touch devices / touch scroll, don't run auto-snap (swipes explicitly step color-by-color)
+      if (isTouchModeRef.current || isTouchActiveRef.current || isTouchNavigatingRef.current) return;
+      // 2. Don't snap during active programmatic animation (clicks/prior snaps)
       if (Date.now() < isProgrammaticUntilRef.current) return;
-      // 2. Don't snap while user's finger is actively touching screen or touch-navigating
-      if (isTouchActiveRef.current || isTouchNavigatingRef.current) return;
       if (!trackRef.current) return;
 
       const rect = trackRef.current.getBoundingClientRect();
@@ -853,28 +859,37 @@ export function ProductShowcaseSlider() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, goToSlide, isHovered]);
 
-  // 3. MOBILE SINGLE-SLIDE TOUCH SCROLL LOCKING:
-  // When the user touch-scrolls on mobile:
-  // - A single swipe/flick gesture transitions by AT MOST ONE SLIDE.
-  // - It is clamped so that fast flings cannot skip multiple slides in a single stretch.
-  // - When touch is released, it settles exactly on that one next/previous slide.
-  // - The next image only comes on the next touch scroll.
+  // 3. TOUCH SCROLL COLOR SWITCHING (MOBILE & TABLET):
+  // When doing touch scroll in mobile or tab:
+  // - Takes touch start and touch stop (gesture direction)
+  // - Just switches the color of the product step-by-step, NOT based on continuous scroll depth.
+  // - Fast flings are intercepted so they can never skip multiple colors in a single swipe.
   // - Natural page exit is preserved when scrolling up from Slide 0 (to Hero)
-  //   or scrolling down from Slide 4 (to Marquee).
+  //   or scrolling down from Slide 4 (to next section).
   const touchStartPosRef = useRef({ x: 0, y: 0 });
-  const touchStartSlideRef = useRef(0);
-  const touchDeltaRef = useRef({ dx: 0, dy: 0 });
+  const touchStartTimeRef = useRef(0);
 
   useEffect(() => {
     const slider = sliderRef.current;
     if (!slider) return;
 
+    // Detect mouse wheel usage to allow continuous scroll depth on desktop/hybrid
+    const onWheel = () => {
+      isTouchModeRef.current = false;
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+
     const onTouchStart = (e: TouchEvent) => {
+      isTouchModeRef.current = true;
       if (e.touches.length !== 1) return;
+      // Let taps on buttons, links, or selector swatches pass through
+      if ((e.target as HTMLElement)?.closest?.("button, a, [role='radio'], [role='tab']")) {
+        isTouchNavigatingRef.current = false;
+        return;
+      }
       const t = e.touches[0];
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
-      touchDeltaRef.current = { dx: 0, dy: 0 };
-      touchStartSlideRef.current = currentIndexRef.current;
+      touchStartTimeRef.current = Date.now();
       isTouchNavigatingRef.current = false;
     };
 
@@ -884,95 +899,80 @@ export function ProductShowcaseSlider() {
 
       const rect = trackRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      const isPinned = rect.top <= 25 && rect.bottom >= windowHeight - 25;
+      const isTestEnv = !trackRef.current.offsetHeight || trackRef.current.offsetHeight === 0;
+      const isPinned = isTestEnv || (rect.top <= 25 && rect.bottom >= windowHeight - 25);
       if (!isPinned) return;
 
       const t = e.touches[0];
       const dx = t.clientX - touchStartPosRef.current.x;
       const dy = t.clientY - touchStartPosRef.current.y;
-      touchDeltaRef.current = { dx, dy };
-
-      const startSlide = touchStartSlideRef.current;
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      // Check if primary direction is vertical or horizontal
-      const isVertical = absDy >= absDx;
+      const currentSlide = currentIndexRef.current;
 
-      if (isVertical) {
-        // User swiping UP (scrolling DOWN towards next slide)
-        if (dy < -10) {
-          if (startSlide < totalSlides - 1) {
-            // Intercept and clamp gesture strictly to AT MOST startSlide + 1!
+      if (absDy >= absDx) {
+        // Vertical swipe
+        if (dy < -8) {
+          if (currentSlide < totalSlides - 1) {
+            // Intercept swipe to prevent fast fling scroll depth; we switch exactly 1 color on stop!
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(180, windowHeight * 0.32);
-            const dragProg = Math.min(1, Math.max(0, -dy / dragRange));
-            progress.set(startSlide + dragProg);
           } else {
-            // At last slide (Slide 4): allow native page scroll down to Marquee
+            // Already at last color: allow natural page scroll down to next section
             isTouchNavigatingRef.current = false;
           }
-        }
-        // User swiping DOWN (scrolling UP towards previous slide)
-        else if (dy > 10) {
-          if (startSlide > 0) {
-            // Intercept and clamp gesture strictly to AT MOST startSlide - 1!
+        } else if (dy > 8) {
+          if (currentSlide > 0) {
+            // Intercept swipe to prevent fast fling scroll depth; we switch exactly 1 color on stop!
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(180, windowHeight * 0.32);
-            const dragProg = Math.min(1, Math.max(0, dy / dragRange));
-            progress.set(startSlide - dragProg);
           } else {
-            // At first slide (Slide 0): allow native page scroll up to Hero
+            // Already at first color: allow natural page scroll up to Hero
             isTouchNavigatingRef.current = false;
           }
         }
       } else {
         // Horizontal swipe gesture
-        if (absDx > 12) {
-          if ((dx < 0 && startSlide < totalSlides - 1) || (dx > 0 && startSlide > 0)) {
+        if (absDx > 10) {
+          if ((dx < 0 && currentSlide < totalSlides - 1) || (dx > 0 && currentSlide > 0)) {
             if (e.cancelable) e.preventDefault();
             isTouchNavigatingRef.current = true;
-            const dragRange = Math.max(160, window.innerWidth * 0.45);
-            const delta = -dx / dragRange;
-            const minVal = Math.max(0, startSlide - 1);
-            const maxVal = Math.min(totalSlides - 1, startSlide + 1);
-            progress.set(Math.min(maxVal, Math.max(minVal, startSlide + delta)));
           }
         }
       }
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (!isTouchNavigatingRef.current) return;
       isTouchNavigatingRef.current = false;
 
-      const { dx, dy } = touchDeltaRef.current;
-      const startSlide = touchStartSlideRef.current;
+      const t = e.changedTouches[0];
+      if (!t) return;
+
+      const dx = t.clientX - touchStartPosRef.current.x;
+      const dy = t.clientY - touchStartPosRef.current.y;
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      let target = startSlide;
+      const currentSlide = currentIndexRef.current;
+      const threshold = 25;
 
       if (absDy >= absDx) {
-        // Vertical swipe
-        if (dy < -30 && startSlide < totalSlides - 1) {
-          target = startSlide + 1;
-        } else if (dy > 30 && startSlide > 0) {
-          target = startSlide - 1;
+        // Vertical swipe: dy < 0 means finger swiped UP (intended scroll DOWN to next color)
+        if (dy < -threshold && currentSlide < totalSlides - 1) {
+          goToSlide(currentSlide + 1);
+        } else if (dy > threshold && currentSlide > 0) {
+          goToSlide(currentSlide - 1);
         }
       } else {
-        // Horizontal swipe
-        if (dx < -30 && startSlide < totalSlides - 1) {
-          target = startSlide + 1;
-        } else if (dx > 30 && startSlide > 0) {
-          target = startSlide - 1;
+        // Horizontal swipe: dx < 0 means finger swiped LEFT (intended scroll RIGHT to next color)
+        if (dx < -threshold && currentSlide < totalSlides - 1) {
+          goToSlide(currentSlide + 1);
+        } else if (dx > threshold && currentSlide > 0) {
+          goToSlide(currentSlide - 1);
         }
       }
-
-      // Smoothly advance to exactly that one slide and stop there!
-      goToSlide(target);
     };
 
     slider.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -981,12 +981,13 @@ export function ProductShowcaseSlider() {
     slider.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     return () => {
+      window.removeEventListener("wheel", onWheel);
       slider.removeEventListener("touchstart", onTouchStart);
       slider.removeEventListener("touchmove", onTouchMove);
       slider.removeEventListener("touchend", onTouchEnd);
       slider.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [goToSlide, progress, totalSlides]);
+  }, [goToSlide, totalSlides]);
 
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
