@@ -674,7 +674,7 @@ function Shop({
           <Eyebrow>The collection</Eyebrow>
           <SplitHeading className="mt-3 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl" lines={[{ text: "New" }, { text: "arrivals", className: "italic font-semibold text-primary" }]} />
         </div>
-        <div className="flex max-w-full gap-2 overflow-x-auto no-scrollbar py-1 touch-pan-x" role="group" aria-label="Filter products">
+        <div className="flex max-w-full gap-2 overflow-x-auto no-scrollbar py-1 touch-auto" role="group" aria-label="Filter products">
           {["All", "Men", "Women"].map((f) => (
             <Magnet key={f} strength={0.3}>
               <motion.button whileTap={{ scale: 0.94 }} aria-pressed={filter === f} onClick={() => setFilter(f)} className="relative min-h-11 cursor-pointer shrink-0 rounded-full border border-border px-6 text-sm font-semibold transition-colors duration-200 hover:border-primary">
@@ -691,8 +691,8 @@ function Shop({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        style={{ WebkitOverflowScrolling: "touch" }}
-        className="no-scrollbar -mx-5 mt-6 sm:mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 lg:mx-0 lg:px-0 cursor-grab active:cursor-grabbing touch-pan-x select-none overscroll-x-contain"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "auto" }}
+        className="no-scrollbar -mx-5 mt-6 sm:mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 lg:mx-0 lg:px-0 cursor-grab active:cursor-grabbing touch-auto select-none overscroll-x-contain"
       >
         <AnimatePresence mode="sync">
           {list.map((p, k) => <ProductCard key={p.name} p={p} i={k} />)}
