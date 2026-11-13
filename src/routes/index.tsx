@@ -29,6 +29,7 @@ import silkRibbon from "@/assets/silk-ribbon.jpg";
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
+import { TrioBoxShowcase } from "@/components/showcase/trio-box-showcase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -185,7 +186,7 @@ function Header() {
   };
   return (
     <header className="fixed inset-x-0 top-4 z-50 px-4">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border bg-background/80 px-5 py-2.5 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-[#a51538]/10 bg-gradient-to-r from-[#fdf5f2]/85 via-[#f9ebe7]/85 to-[#f5e1dc]/85 px-5 py-2.5 shadow-[0_8px_30px_-12px_rgba(120,30,50,0.25)] backdrop-blur-xl">
         <a
           href="#drop"
           onClick={(e) => handleNavClick(e, "Drop")}
@@ -1006,6 +1007,7 @@ function Index() {
       <main className="overflow-x-clip">
         <Hero />
         <ProductShowcaseSlider />
+        <TrioBoxShowcase />
         <Marquee />
         <Shop filter={shopFilter} onFilterChange={setShopFilter} />
         <Collections onSelectCollection={(cat) => setShopFilter(cat)} />

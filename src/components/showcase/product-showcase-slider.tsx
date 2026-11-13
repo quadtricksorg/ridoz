@@ -1041,7 +1041,7 @@ export function ProductShowcaseSlider() {
         onWheel={handleWheel}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {/* Same grain texture as Hero and other sections */}
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
