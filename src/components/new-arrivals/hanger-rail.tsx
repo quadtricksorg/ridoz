@@ -52,7 +52,8 @@ const TURN_MS = 650; // … plus the turn / slide transition
 const STEP_MS = DWELL_MS + TURN_MS;
 const RESUME_MS = 4500; // idle time after manual input before autoplay resumes
 const GOTO_HOLD_MS = 9000; // a garment opened from another section stays in front this long
-const HOVER_INTENT_MS = 160; // pointer must rest on a garment this long to select it
+const HOVER_INTENT_MS = 90; // pointer must rest on a garment this long to preview it
+const HOVER_RELEASE_MS = 220; // grace period before a preview ends (no flicker at edges)
 const SIDE_ANGLE = 80;
 const N = PRODUCTS.length;
 const HALF = Math.floor(N / 2);
@@ -199,6 +200,7 @@ type ItemProps = {
   hangerH: number;
   offLimit: number;
   idle: boolean; // gentle idle sway on the front garment
+  preview: boolean; // hovered: turned to the front in place, full colour, swaying
   focus: number; // scale of the selected garment
   onPick: (i: number) => void;
 };
@@ -215,6 +217,7 @@ const HangerItem = memo(function HangerItem({
   hangerH,
   offLimit,
   idle,
+  preview,
   focus,
   onPick,
 }: ItemProps) {
@@ -247,7 +250,8 @@ const HangerItem = memo(function HangerItem({
   const garmentTop = hangerH;
   const hookLift = hangerH * 0.14; // hook curls over the rail
   const near = Math.abs(d) <= 6;
-  const turn = isActive ? 0 : d < 0 ? 180 - SIDE_ANGLE : SIDE_ANGLE; // crossing sides passes edge-on
+  const front = isActive || preview;
+  const turn = front ? 0 : d < 0 ? 180 - SIDE_ANGLE : SIDE_ANGLE; // crossing sides passes edge-on
 
   return (
     <motion.div
@@ -258,18 +262,26 @@ const HangerItem = memo(function HangerItem({
         width: w,
         marginLeft: -w / 2,
         top: railY - hookLift,
-        zIndex: 200 - Math.abs(d) * 2,
+        zIndex: preview ? 300 : 200 - Math.abs(d) * 2,
       }}
     >
       {/* pendulum around the hook */}
       <motion.div style={{ rotate: sway, transformOrigin: `50% ${hookLift}px` }}>
         <motion.div
           style={{ transformOrigin: `50% ${hookLift}px` }}
-          animate={idle && isActive ? { rotate: [0, 1.1, 0, -1.1, 0] } : { rotate: 0 }}
+          animate={
+            preview
+              ? { rotate: [0, 2.2, -1.6, 1, 0] }
+              : idle && isActive
+                ? { rotate: [0, 1.1, 0, -1.1, 0] }
+                : { rotate: 0 }
+          }
           transition={
-            idle && isActive
-              ? { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
-              : { duration: 0.4 }
+            preview
+              ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+              : idle && isActive
+                ? { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
+                : { duration: 0.4 }
           }
         >
           <motion.div
@@ -281,7 +293,11 @@ const HangerItem = memo(function HangerItem({
             }}
             initial={false}
             // Selected garment: full colour and (on desktop) larger; the rest step back.
-            animate={{ rotateY: turn, scale: isActive ? focus : 0.93, opacity: isActive ? 1 : 0.5 }}
+            animate={{
+              rotateY: turn,
+              scale: isActive ? focus : preview ? 1 : 0.93,
+              opacity: front ? 1 : 0.5,
+            }}
             transition={{ type: "spring", stiffness: 120, damping: 19, mass: 0.9 }}
           >
             <img
@@ -309,8 +325,8 @@ const HangerItem = memo(function HangerItem({
         onClick={() => onPick(index)}
         className="pointer-events-auto absolute top-0 cursor-pointer bg-transparent"
         style={{
-          left: isActive ? (w - w * focus) / 2 : w / 2 - slot / 2,
-          width: isActive ? w * focus : slot,
+          left: isActive ? (w - w * focus) / 2 : preview ? 0 : w / 2 - slot / 2,
+          width: isActive ? w * focus : preview ? w : slot,
           height: (hangerH + h) * (isActive ? focus : 1),
         }}
       />
@@ -390,6 +406,7 @@ export function NewArrivals() {
   const activeRef = useRef(0);
   activeRef.current = active;
   const [hovering, setHovering] = useState(false);
+  const [preview, setPreview] = useState(-1); // garment previewed in place under the mouse
   const [paused, setPaused] = useState(false);
   const [manual, setManual] = useState(false); // announce changes only for user-driven moves
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -421,7 +438,10 @@ export function NewArrivals() {
   }, []);
 
   /** Select a garment; it always moves to the centre of the stage. */
-  const select = useCallback((i: number) => setActive(mod(i)), []);
+  const select = useCallback((i: number) => {
+    setActive(mod(i));
+    setPreview(-1);
+  }, []);
   const pick = useCallback(
     (i: number) => {
       select(i);
@@ -468,8 +488,9 @@ export function NewArrivals() {
     return () => el.removeEventListener("wheel", onWheel);
   }, [pick]);
 
-  /* Hover intent: the garment the (moving) mouse rests on is centred. Only real pointer
-     movement counts, so a garment sliding under a still cursor is never auto-selected. */
+  /* Hover preview: the garment the (moving) mouse rests on turns to the front where it
+     hangs, with room either side — a click brings it to the centre. Only real pointer
+     movement counts, so a garment sliding under a still cursor is never previewed. */
   const hoverIntent = useRef<{
     idx: number;
     x: number;
@@ -479,6 +500,7 @@ export function NewArrivals() {
   const clearHover = () => {
     clearTimeout(hoverIntent.current.t);
     hoverIntent.current.idx = -1;
+    setPreview(-1);
   };
   useEffect(
     () => () => {
@@ -522,13 +544,8 @@ export function NewArrivals() {
     if (idx === h.idx) return;
     clearTimeout(h.t);
     h.idx = idx;
-    if (idx >= 0 && idx !== activeRef.current) {
-      h.t = setTimeout(() => {
-        h.idx = -1;
-        select(idx);
-        setManual(true);
-      }, HOVER_INTENT_MS);
-    }
+    const next = idx === activeRef.current ? -1 : idx;
+    h.t = setTimeout(() => setPreview(next), idx < 0 ? HOVER_RELEASE_MS : HOVER_INTENT_MS);
   };
   const endDrag = (e: React.PointerEvent) => {
     if (drag.current?.moved) {
@@ -569,11 +586,32 @@ export function NewArrivals() {
   const positions = useMemo(() => {
     if (!geo) return [];
     const extra = extraFor(geo, active);
-    return PRODUCTS.map((_, i) => {
+    const base = PRODUCTS.map((_, i) => {
       const d = loopDist(i, active);
       return { d, x: d * geo.slot + Math.sign(d) * extra };
     });
-  }, [geo, active]);
+    if (preview < 0 || preview === active) return base;
+
+    // A previewed garment turns to face the front where it hangs, so it needs room:
+    // it moves outward a little and the garments beyond it make way. Near the screen
+    // edge it stays fully visible and the garments between it and the centre close up.
+    const dh = loopDist(preview, active);
+    const s = Math.sign(dh);
+    const wh = geo.sizes[preview]!.w;
+    const room = Math.max(0, wh / 2 + wh * 0.08 + geo.gapBase + 6 - geo.slot / 2);
+    const xh = base[preview]!.x;
+    const limit = geo.W * 0.44 - wh / 2 - 8; // clear of the 6% edge fade
+    const move = Math.max(0, Math.min(room, limit - Math.abs(xh))); // outward move that fits
+    const squeeze = room - move; // what the inner garments give up instead
+    return base.map(({ d, x }) => {
+      if (Math.sign(d) !== s) return { d, x };
+      const k = Math.abs(d);
+      const kh = Math.abs(dh);
+      if (k === kh) return { d, x: x + s * move };
+      if (k > kh) return { d, x: x + s * (move + room) };
+      return { d, x: x - s * squeeze * (k / kh) };
+    });
+  }, [geo, active, preview]);
 
   const catCount = PRODUCTS.filter((p) => p.category === activeCat).length;
   const catPos = active - firstIndexOf(activeCat) + 1;
@@ -734,6 +772,7 @@ export function NewArrivals() {
               hangerH={geo.hangerH}
               offLimit={geo.offLimit}
               idle={inView && !reduce}
+              preview={i === preview}
               focus={geo.focus}
               onPick={pick}
             />

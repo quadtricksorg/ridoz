@@ -20,6 +20,7 @@ import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
 import { productById } from "@/data/products";
 import { NewArrivals } from "@/components/new-arrivals/hanger-rail";
 import { EveryBodyHero } from "@/components/hero/every-body-hero";
+import { ClientsSection } from "@/components/clients/clients-section";
 import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
 import fabric from "@/assets/fabric.jpg";
 
@@ -143,7 +144,7 @@ function Header() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
   });
-  const links = ["Drop", "Designs", "Shop", "Reviews", "Contact"];
+  const links = ["Drop", "Designs", "Shop", "Reviews", "Clients", "Contact"];
   const [activeSection, setActiveSection] = useState("Drop");
 
   useEffect(() => {
@@ -522,6 +523,7 @@ function Index() {
         <NewArrivals />
         <Feature />
         <Reviews />
+        <ClientsSection partnerHref={WHATSAPP_ENQUIRY_URL} />
       </main>
       <Footer />
     </MotionConfig>
