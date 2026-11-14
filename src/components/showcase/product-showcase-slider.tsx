@@ -23,6 +23,7 @@ import {
   type ShowcaseProductType,
 } from "@/data/showcase-slides";
 import { FEATURES_BY_PRODUCT, FeatureRow, ShowcaseStage } from "@/components/showcase/showcase-stage-decor";
+import { LOOK_TO_RAIL, goToRail } from "@/lib/shop-links";
 
 /** Autoplay: how long each colourway stays, and how long after the last user input it resumes. */
 const AUTOPLAY_MS = 3200;
@@ -409,6 +410,7 @@ function ProductInfoCardItem({
         <div className="mt-2.5 flex items-center justify-center sm:hidden">
           <a
             href={slide.link || "#shop"}
+            data-look={slide.id}
             onClick={onExplore}
             style={{
               backgroundColor: slide.darkColor,
@@ -436,6 +438,7 @@ function ProductInfoCardItem({
 
         <a
           href={slide.link || "#shop"}
+          data-look={slide.id}
           onClick={onExplore}
           style={{
             backgroundColor: slide.darkColor,
@@ -1060,14 +1063,11 @@ export function ProductShowcaseSlider() {
     return () => ro.disconnect();
   }, [activeSlides]);
 
+  /** "Shop this look" → the same garment, in front on the hanger rail (see LOOK_TO_RAIL). */
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
-    e.preventDefault();
-    const shopEl = document.getElementById("shop");
-    if (shopEl) {
-      shopEl.scrollIntoView({ behavior: "smooth" });
-      window.history.pushState(null, "", "#shop");
-    }
+    const look = LOOK_TO_RAIL[e.currentTarget.dataset["look"] ?? ""];
+    if (look) goToRail(look.target, e);
   };
 
   const hasNextSlide = currentIndex < totalSlides - 1;

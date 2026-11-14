@@ -27,6 +27,7 @@ import podium from "@/assets/showcase/trio/podium.webp";
 import cotton from "@/assets/showcase/trio/cotton.webp";
 import leafShadow from "@/assets/showcase/trio/leaf-shadow.webp";
 import ridozWordmark from "@/assets/showcase/trio/ridoz-wordmark.webp";
+import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
 
 /**
  * "The 3-Piece Box" — the RIDOZ Panties window carton on a stone podium.
@@ -328,6 +329,7 @@ export function TrioBoxShowcase() {
               <BoxToggle boxIdx={boxIdx} onSelect={selectBox} />
               <a
                 href="#shop"
+                onClick={(e) => goToRail(CTA_TO_RAIL.trioExplore, e)}
                 className="mt-2 inline-flex min-h-10 items-center gap-1.5 border-b border-primary/60 text-[13px] font-semibold text-primary transition-colors hover:border-primary sm:mt-4 sm:min-h-11 sm:text-[15px] wide:[@media(max-height:760px)]:mt-2"
               >
                 Explore the collection <ArrowUpRight className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type ReactNode, type MouseEvent, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from "react";
 import {
   motion,
   AnimatePresence,
@@ -13,14 +13,15 @@ import {
   useVelocity,
   type Variants,
 } from "framer-motion";
-import { Phone, Menu, X, ArrowUpRight, Star, Instagram, Facebook, Youtube, Wind, Feather, ShieldCheck, Leaf, Move } from "lucide-react";
+import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck } from "lucide-react";
 import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
 import { productById } from "@/data/products";
 import { NewArrivals } from "@/components/new-arrivals/hanger-rail";
+import { EveryBodyHero } from "@/components/hero/every-body-hero";
+import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
 import fabric from "@/assets/fabric.jpg";
-import silkRibbon from "@/assets/silk-ribbon.jpg";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -59,25 +60,34 @@ export const Route = createFileRoute("/")({
 
 const PHONE = "+91 7510441075";
 const TEL = `tel:${PHONE.replace(/\s/g, "")}`;
+const EMAIL = "faisalcpulakkal@gmail.com";
+const INSTAGRAM_URL = "https://www.instagram.com/ridoz_style?utm_source=ig_web_button_share_sheet&obrf=ZDNlZDc0MzIxNw==";
+const MAPS_URL = "https://maps.app.goo.gl/dF8pQshLZfj1kH2E6";
+/** Gmail's web composer — what desktops open, and the fallback on phones. */
+const GMAIL_WEB = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(EMAIL)}`;
+
+/** New email to RIDOZ in Gmail: the Gmail app on phones (web Gmail if it isn't installed), web Gmail on desktops. */
+function openGmail(e: React.MouseEvent<HTMLAnchorElement>) {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    e.preventDefault();
+    window.location.href = `intent://${EMAIL}#Intent;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(GMAIL_WEB)};end`;
+  } else if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    e.preventDefault();
+    // Gmail app not installed → the page stays visible, so fall back to web Gmail.
+    const fallback = setTimeout(() => {
+      if (document.visibilityState === "visible") window.location.href = GMAIL_WEB;
+    }, 1200);
+    document.addEventListener("visibilitychange", () => clearTimeout(fallback), { once: true });
+    window.location.href = `googlegmail:///co?to=${encodeURIComponent(EMAIL)}`;
+  }
+  // Desktops: the link itself opens web Gmail in a new tab.
+}
 const WHATSAPP_NUMBER = PHONE.replace(/\D/g, "");
 const WHATSAPP_ENQUIRY_MESSAGE =
   "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
 const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
-type P = { name: string; short: string; img: string; tag: string; sw: string };
 const trunk = productById("trunk-maroon").image;
-const bra = productById("bra-caramel").image;
-const brief = productById("brief-navy").image;
-const panty = productById("panty-deep-teal").image;
-const vest = productById("vest-white").image;
-const tee = productById("tee-white").image;
-const products: P[] = [
-  { name: "Maroon Boxer Trunk", short: "TRUNK", img: trunk, tag: "Men", sw: "var(--swatch-wine)" },
-  { name: "Caramel Comfort Bra", short: "BRA", img: bra, tag: "Women", sw: "var(--swatch-sand)" },
-  { name: "Navy Classic Brief", short: "BRIEF", img: brief, tag: "Men", sw: "var(--swatch-navy)" },
-  { name: "Deep Teal Hipster", short: "PANTY", img: panty, tag: "Women", sw: "var(--swatch-teal)" },
-  { name: "Classic Cotton Vest", short: "VEST", img: vest, tag: "Men", sw: "var(--swatch-slate)" },
-  { name: "Crew Neck Undershirt", short: "CREW", img: tee, tag: "Men", sw: "var(--swatch-wine)" },
-];
 const reviews = [
   { t: "Comfort You Can Feel", q: "Soft fabric that stays comfortable from morning meetings to late nights.", n: "Anjali R." },
   { t: "Quality That Matters", q: "Stitching holds up wash after wash. The waistband never rolls.", n: "Rahul M." },
@@ -280,269 +290,6 @@ function Header() {
   );
 }
 
-function Hero() {
-  const [i, setI] = useState(0);
-  const p = products[i] ?? products[0]!;
-  const ref = useRef<HTMLElement>(null);
-  const isInteracting = useRef(false);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 120, damping: 16 });
-  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 16 });
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const imgY = useTransform(scrollYProgress, [0, 1], [0, -70]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (!isInteracting.current) {
-        setI((v) => (v + 1) % products.length);
-      }
-    }, 5500);
-    return () => clearInterval(t);
-  }, [i]);
-
-  const move = (e: MouseEvent<HTMLElement>) => {
-    if (isInteracting.current) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-
-  const handleTouchMove = (e: TouchEvent<HTMLElement>) => {
-    if (isInteracting.current || !e.touches[0] || !ref.current) return;
-    const t = e.touches[0];
-    const r = ref.current.getBoundingClientRect();
-    mx.set((t.clientX - r.left) / r.width - 0.5);
-    my.set((t.clientY - r.top) / r.height - 0.5);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isInteracting.current) {
-      mx.set(0);
-      my.set(0);
-    }
-  };
-
-  return (
-    <section
-      ref={ref}
-      id="drop"
-      onMouseMove={move}
-      onMouseLeave={() => { if (!isInteracting.current) { mx.set(0); my.set(0); } }}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      className="relative flex min-h-[100svh] items-center justify-center overflow-visible pt-20 pb-6 sm:pt-28 sm:pb-12 md:h-[100svh] md:max-h-[100svh] md:pt-28 lg:pt-32 md:pb-8"
-    >
-      <div className="grain absolute inset-0 -z-10 opacity-60" />
-
-      <div className="mx-auto grid w-full max-w-7xl items-center gap-6 px-5 sm:gap-8 sm:px-8 md:px-14 lg:px-20 xl:px-24 md:grid-cols-[1.05fr_1.3fr_1.1fr] md:items-start md:gap-8 lg:gap-12 xl:gap-14">
-        {/* Left Column: Headline & Action */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="relative z-10 flex flex-col justify-center pt-2 md:pt-5">
-          <motion.h1 variants={rise} className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.94]">
-            Comfort<br />meets<br /><em className="font-semibold text-primary">confidence.</em>
-          </motion.h1>
-          <div className="my-2.5 h-[2px] w-12 bg-primary/70 md:hidden" />
-          <motion.p variants={rise} className="mt-2 md:mt-4 max-w-sm text-xs sm:text-sm md:text-base leading-relaxed text-muted-foreground">
-            Seamless support, all-day comfort. Engineered for performance, made for every day.
-          </motion.p>
-          <motion.div variants={rise} className="mt-5 hidden md:block lg:mt-8">
-            <Magnet strength={0.35}>
-              <a
-                href="#shop"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
-                  window.history.pushState(null, "", "#shop");
-                }}
-                className="btn-sweep group inline-flex min-h-11 sm:min-h-12 items-center gap-2.5 rounded-full border border-primary px-6 text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground shadow-xs"
-              >
-                Explore the drop <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-              </a>
-            </Magnet>
-          </motion.div>
-        </motion.div>
-
-        {/* Center Column: Prominent Circle Backdrop + Interactive Wear Product */}
-        <motion.div style={{ y: imgY, perspective: 1200 }} className="relative flex items-center justify-center will-change-transform py-4 md:py-0 self-center">
-          {/* Circle backdrop - darker matching selection swatch, increased size */}
-          <motion.div
-            animate={{ backgroundColor: p.sw }}
-            transition={{ duration: 1.1 }}
-            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[300px] sm:w-[380px] md:w-[420px] lg:w-[500px] xl:w-[560px] 2xl:w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden shadow-2xl md:shadow-none opacity-95 will-change-transform border border-white/40"
-          >
-            <motion.img
-              key={p.img}
-              initial={{ scale: 1.15, rotate: -3, opacity: 0 }}
-              animate={{ scale: 1.05, rotate: 0, opacity: 0.18 }}
-              transition={{ duration: 0.8 }}
-              src={silkRibbon}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center mix-blend-multiply pointer-events-none select-none"
-            />
-            <div className="absolute inset-0 bg-radial from-transparent via-transparent to-black/15 pointer-events-none" />
-          </motion.div>
-
-          {/* Wear image with soft contact shadow: concentric inside circle */}
-          <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="relative flex flex-col items-center justify-center">
-            <motion.div
-              drag
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.25}
-              dragTransition={{ bounceStiffness: 300, bounceDamping: 22 }}
-              whileDrag={{ scale: 1.05 }}
-              onPointerDown={() => { isInteracting.current = true; }}
-              onDragStart={() => { isInteracting.current = true; }}
-              onDrag={(_, info) => {
-                isInteracting.current = true;
-                mx.set(Math.max(-0.6, Math.min(0.6, info.offset.x / 180)));
-                my.set(Math.max(-0.6, Math.min(0.6, info.offset.y / 180)));
-              }}
-              onDragEnd={(_, info) => {
-                isInteracting.current = false;
-                mx.set(0);
-                my.set(0);
-                if (info.offset.x < -45 || info.velocity.x < -300) {
-                  setI((v) => (v + 1) % products.length);
-                } else if (info.offset.x > 45 || info.velocity.x > 300) {
-                  setI((v) => (v - 1 + products.length) % products.length);
-                }
-              }}
-              className="cursor-grab active:cursor-grabbing touch-pan-y select-none will-change-transform"
-            >
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={p.img}
-                  src={p.img}
-                  alt={p.name}
-                  width={800}
-                  height={1000}
-                  draggable={false}
-                  decoding="async"
-                  style={{ rotateX: rx, rotateY: ry }}
-                  initial={{ opacity: 0, scale: 0.72, rotate: -16, y: 40 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.75, rotate: 12, y: -30 }}
-                  transition={{ duration: 0.8, ease }}
-                  className="drop-product pointer-events-none aspect-square w-[195px] sm:w-[235px] md:w-[275px] lg:w-[325px] xl:w-[365px] 2xl:w-[395px] object-contain select-none will-change-transform drop-shadow-md"
-                />
-              </AnimatePresence>
-            </motion.div>
-            {/* Ground shadow beneath the wear item */}
-            <motion.div
-              animate={{ scale: [1, 0.92, 1], opacity: [0.35, 0.22, 0.35] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="pointer-events-none -mt-3 sm:-mt-4 h-4 sm:h-5 w-36 sm:w-48 rounded-full bg-black/30 blur-md"
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Right Column: Title, Swatches & Feature Cards */}
-        <div className="relative z-10 flex flex-col items-start pt-2 md:pt-5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={p.name}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4, ease }}
-              className="w-full"
-            >
-              <p className="text-xs sm:text-sm font-semibold tracking-wider text-muted-foreground uppercase">{p.tag}</p>
-              <h2 className="mt-1 font-display text-2xl sm:text-3xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold tracking-tight text-foreground leading-tight">{p.name}</h2>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="my-3 sm:my-4 h-px w-14 bg-foreground/20" />
-
-          {/* Color Swatches */}
-          <div className="flex items-center gap-2.5 sm:gap-3" role="group" aria-label="Choose product">
-            {products.map((q, k) => (
-              <Magnet key={q.name} strength={0.4}>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={q.name}
-                  aria-pressed={k === i}
-                  onClick={() => setI(k)}
-                  style={{ backgroundColor: q.sw }}
-                  className={`relative h-10 w-10 sm:h-11 sm:w-11 md:h-10 md:w-10 lg:h-12 lg:w-12 shrink-0 cursor-pointer overflow-hidden rounded-full p-1.5 transition-all duration-200 shadow-sm ${
-                    k === i
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
-                      : "opacity-75 hover:opacity-100 hover:scale-105"
-                  }`}
-                >
-                  <img src={q.img} alt="" draggable={false} className="h-full w-full object-contain pointer-events-none" />
-                </motion.button>
-              </Magnet>
-            ))}
-          </div>
-
-          {/* Mobile view: 3-column horizontal card as in reference design */}
-          <div className="mt-4 w-full md:hidden">
-            <div className="rounded-2xl border border-border/70 bg-background/60 p-3 backdrop-blur-xs shadow-xs">
-              <div className="grid grid-cols-3 divide-x divide-border/60 text-center">
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Leaf className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">Ultra Soft Fabric</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Feels gentle on skin</p>
-                </div>
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Wind className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">Breathable All Day</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Keeps you fresh</p>
-                </div>
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Move className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">4-Way Stretch</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Moves with you</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tablet & Desktop view: Stacked feature cards */}
-          <div className="mt-6 hidden w-full max-w-sm flex-col gap-3 md:flex">
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Leaf className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">Ultra Soft Fabric</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Feels gentle on skin</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Wind className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">Breathable All Day</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Keeps you fresh</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Move className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">4-Way Stretch</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Moves with you</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const wrap = (min: number, max: number, v: number) => {
   const r = max - min;
   return ((((v - min) % r) + r) % r) + min;
@@ -615,7 +362,7 @@ function Feature() {
             </div>
             <motion.div variants={rise} className="mt-7">
               <Magnet strength={0.35}>
-                <a href="#shop" className="btn-sweep group inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors duration-300 [--btn-sweep:var(--background)]">
+                <a href="#shop" onClick={(e) => goToRail(CTA_TO_RAIL.featureShopBoxers, e)} className="btn-sweep group inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors duration-300 [--btn-sweep:var(--background)]">
                   Shop boxers <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
                 </a>
               </Magnet>
@@ -669,18 +416,24 @@ function Footer() {
             <a href={TEL} className="mt-1 inline-flex min-h-11 items-center gap-2 font-semibold hover:text-primary transition-colors">
               <Phone className="h-4 w-4" />{PHONE}
             </a>
+            <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-2 break-all font-semibold hover:text-primary transition-colors">
+              <Mail className="h-4 w-4 shrink-0" />{EMAIL}
+            </a>
           </div>
           <div className="mt-4 flex gap-2">
             {[
-              { I: Instagram, l: "Instagram" },
-              { I: Facebook, l: "Facebook" },
-              { I: Youtube, l: "YouTube" },
-            ].map(({ I, l }) => (
+              { I: Instagram, l: "RIDOZ on Instagram", href: INSTAGRAM_URL },
+              { I: Mail, l: `Email ${EMAIL} in Gmail`, href: GMAIL_WEB, onClick: openGmail },
+              { I: MapPin, l: "RIDOZ location on Google Maps", href: MAPS_URL },
+            ].map(({ I, l, href, onClick }) => (
               <Magnet key={l} strength={0.4}>
                 <a
-                  href="#contact"
-                  onClick={(e) => e.preventDefault()}
+                  href={href}
+                  onClick={onClick}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={l}
+                  title={l}
                   className="btn-sweep flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/60 transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground"
                 >
                   <I className="h-4 w-4" />
@@ -690,7 +443,7 @@ function Footer() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-x-2 text-sm text-muted-foreground">
-          {["Terms & Conditions", "Privacy Policy", "Returns & Exchanges", "Shipping & Delivery", "Contact Us", "Customer Care"].map((l) => (
+          {["Terms & Conditions", "Privacy Policy", "Returns & Exchanges", "Shipping & Delivery"].map((l) => (
             <a
               key={l}
               href="#contact"
@@ -762,7 +515,7 @@ function Index() {
       <ScrollProgress />
       <Header />
       <main className="overflow-x-clip">
-        <Hero />
+        <EveryBodyHero />
         <ProductShowcaseSlider />
         <TrioBoxShowcase />
         <Marquee />

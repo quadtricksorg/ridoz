@@ -27,6 +27,7 @@ import {
   type Product,
   type RailCategory,
 } from "@/data/products";
+import { useRailGoto } from "@/lib/shop-links";
 import { FEATURES_BY_PRODUCT, FeatureRow } from "@/components/showcase/showcase-stage-decor";
 
 /**
@@ -50,6 +51,7 @@ const DWELL_MS = 1000; // front view held for 1s …
 const TURN_MS = 650; // … plus the turn / slide transition
 const STEP_MS = DWELL_MS + TURN_MS;
 const RESUME_MS = 4500; // idle time after manual input before autoplay resumes
+const GOTO_HOLD_MS = 9000; // a garment opened from another section stays in front this long
 const HOVER_INTENT_MS = 160; // pointer must rest on a garment this long to select it
 const SIDE_ANGLE = 80;
 const N = PRODUCTS.length;
@@ -105,6 +107,7 @@ type Geo = {
   gapBase: number;
   offLimit: number; // |x| beyond this a garment is off-screen
   sizes: { w: number; h: number }[]; // drawn size of every garment (px)
+  focus: number; // extra scale of the selected garment (bigger on desktop)
 };
 
 function computeGeo(W: number, H: number): Geo {
@@ -115,7 +118,8 @@ function computeGeo(W: number, H: number): Geo {
   const fill = phone ? 1 : 0.78; // share of the free height the tallest garment may use
   const ppc = Math.min(((H - 10 - hangerH - floor) * fill) / MAX_H_CM, (W * share) / MAX_W_CM); // px per cm
   const sizes = REAL.map((s) => ({ w: s.w * ppc, h: s.h * ppc }));
-  const tallest = hangerH + MAX_H_CM * ppc;
+  const focus = phone ? 1 : W / H < 1.05 ? 1.08 : 1.2;
+  const tallest = (hangerH + MAX_H_CM * ppc) * focus;
   const railY = clamp((H - floor - tallest) / 2, 8, H * 0.22);
 
   // Side garments are packed tightly, but the loop must always reach past both edges
@@ -126,12 +130,12 @@ function computeGeo(W: number, H: number): Geo {
   const gapBase = 6;
   const minExtra = (MIN_W_CM * ppc) / 2 + gapBase - slot / 2;
   slot = Math.max(slot, (W / 2 + margin - minExtra) / (HALF - 1));
-  return { W, H, railY, hangerH, slot, gapBase, offLimit: W / 2 + margin, sizes };
+  return { W, H, railY, hangerH, slot, gapBase, offLimit: W / 2 + margin, sizes, focus };
 }
 
 /** Extra half-space either side of the front garment ("a little space"). */
 const extraFor = (g: Geo, active: number) => {
-  const w = g.sizes[active]!.w;
+  const w = g.sizes[active]!.w * g.focus;
   return w / 2 + w * 0.06 + g.slot * 0.8 + g.gapBase - g.slot / 2;
 };
 
@@ -195,6 +199,7 @@ type ItemProps = {
   hangerH: number;
   offLimit: number;
   idle: boolean; // gentle idle sway on the front garment
+  focus: number; // scale of the selected garment
   onPick: (i: number) => void;
 };
 
@@ -210,6 +215,7 @@ const HangerItem = memo(function HangerItem({
   hangerH,
   offLimit,
   idle,
+  focus,
   onPick,
 }: ItemProps) {
   const isActive = d === 0;
@@ -274,7 +280,8 @@ const HangerItem = memo(function HangerItem({
               height: garmentTop + h,
             }}
             initial={false}
-            animate={{ rotateY: turn, scale: isActive ? 1 : 0.93 }}
+            // Selected garment: full colour and (on desktop) larger; the rest step back.
+            animate={{ rotateY: turn, scale: isActive ? focus : 0.93, opacity: isActive ? 1 : 0.5 }}
             transition={{ type: "spring", stiffness: 120, damping: 19, mass: 0.9 }}
           >
             <img
@@ -302,9 +309,9 @@ const HangerItem = memo(function HangerItem({
         onClick={() => onPick(index)}
         className="pointer-events-auto absolute top-0 cursor-pointer bg-transparent"
         style={{
-          left: isActive ? 0 : w / 2 - slot / 2,
-          width: isActive ? w : slot,
-          height: hangerH + h,
+          left: isActive ? (w - w * focus) / 2 : w / 2 - slot / 2,
+          width: isActive ? w * focus : slot,
+          height: (hangerH + h) * (isActive ? focus : 1),
         }}
       />
     </motion.div>
@@ -403,14 +410,14 @@ export function NewArrivals() {
     return () => ro.disconnect();
   }, []);
 
-  const pause = useCallback(() => {
+  const pause = useCallback((ms: number = RESUME_MS) => {
     setPaused(true);
     setManual(true);
     clearTimeout(pauseTimer.current);
     pauseTimer.current = setTimeout(() => {
       setPaused(false);
       setManual(false);
-    }, RESUME_MS);
+    }, ms);
   }, []);
 
   /** Select a garment; it always moves to the centre of the stage. */
@@ -430,6 +437,13 @@ export function NewArrivals() {
     const t = setTimeout(() => select(active + 1), STEP_MS);
     return () => clearTimeout(t);
   }, [playing, active, select]);
+
+  /* "Shop this look" / "Explore" / "Shop boxers" elsewhere on the page (src/lib/shop-links.ts):
+     show that garment, held long enough for the page to scroll here and the viewer to look. */
+  useRailGoto((i) => {
+    select(i);
+    pause(GOTO_HOLD_MS);
+  });
 
   const step = useCallback((dir: number) => pick(activeRef.current + dir), [pick]);
 
@@ -564,14 +578,14 @@ export function NewArrivals() {
   const catCount = PRODUCTS.filter((p) => p.category === activeCat).length;
   const catPos = active - firstIndexOf(activeCat) + 1;
   const activeSize = geo?.sizes[active];
-  const shadowY = geo && activeSize ? geo.railY + geo.hangerH + activeSize.h + 6 : 0;
+  const shadowY = geo && activeSize ? geo.railY + (geo.hangerH + activeSize.h) * geo.focus + 6 : 0;
 
   return (
     <section
       ref={sectionRef}
       id="shop"
       aria-label="Shop by collection"
-      className="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden pb-3 pt-[5.2rem] sm:pb-4 sm:pt-[5.6rem] wide:pb-6 wide:pt-[6.4rem]"
+      className="relative flex h-[100svh] scroll-mt-[-6rem] min-h-[560px] flex-col overflow-hidden pb-3 pt-[5.2rem] sm:pb-4 sm:pt-[5.6rem] wide:pb-6 wide:pt-[6.4rem]"
     >
       <svg width="0" height="0" className="absolute" aria-hidden>
         <defs>
@@ -685,7 +699,7 @@ export function NewArrivals() {
             initial={false}
             animate={{
               y: Math.min(shadowY, geo.H - 30),
-              scaleX: clamp(activeSize.w / 300, 0.5, 1.4),
+              scaleX: clamp((activeSize.w * geo.focus) / 300, 0.5, 1.6),
             }}
             transition={{ type: "spring", stiffness: 120, damping: 20 }}
           />
@@ -720,6 +734,7 @@ export function NewArrivals() {
               hangerH={geo.hangerH}
               offLimit={geo.offLimit}
               idle={inView && !reduce}
+              focus={geo.focus}
               onPick={pick}
             />
           ))}
