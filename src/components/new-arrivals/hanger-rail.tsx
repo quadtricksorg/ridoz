@@ -20,10 +20,17 @@ import {
 } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { CATEGORIES, PRODUCTS, type Product, type ProductCategory } from "@/data/products";
+import {
+  RAIL_CATEGORIES as CATEGORIES,
+  RAIL_PRODUCTS as PRODUCTS,
+  SIZES,
+  type Product,
+  type RailCategory,
+} from "@/data/products";
+import { FEATURES_BY_PRODUCT, FeatureRow } from "@/components/showcase/showcase-stage-decor";
 
 /**
- * New Arrivals — a boutique clothes rail.
+ * Shop by collection — a boutique clothes rail of the collections.
  *
  * Every product hangs side-on from a brass rail that loops (the last garments hang to
  * the left of the first one, so neither side is ever empty). The selected garment is
@@ -32,8 +39,8 @@ import { CATEGORIES, PRODUCTS, type Product, type ProductCategory } from "@/data
  * bring it to the centre; swipe / drag / horizontal-scroll, arrows, keys and the
  * category chips all work, and the chips and the rail stay in sync both ways.
  *
- * Garments are drawn at their real-life relative size (a vest is ~62 cm tall, a bra
- * ~34 cm wide), so tops look big and innerwear small — as on a real rail.
+ * Garments are drawn at their real-life relative size (a trunk is ~36 cm wide, a
+ * panty ~30 cm), so the rail looks natural.
  *
  * Motion (compositor-only: transform + opacity): each hanger's x is a spring whose
  * velocity drives a pendulum sway; side view = rotateY(±80°), front view = 0.
@@ -48,36 +55,46 @@ const SIDE_ANGLE = 80;
 const N = PRODUCTS.length;
 const HALF = Math.floor(N / 2);
 
-/** Real-life size: tops by height, everything else by width (cm, laid flat / hung). */
-const TOP_HEIGHT_CM = 62;
-const WIDTH_CM: Record<Exclude<ProductCategory, "top">, number> = {
+/** Real-life width of each garment type (cm, laid flat / hung). */
+const WIDTH_CM: Record<RailCategory, number> = {
   bra: 34,
   panty: 30,
   print: 30,
   brief: 32,
   trunk: 36,
 };
-const realSize = (p: Product) => {
-  const ratio = p.w / p.h;
-  if (p.category === "top") return { w: TOP_HEIGHT_CM * ratio, h: TOP_HEIGHT_CM };
+const TAGLINE: Record<RailCategory, string> = {
+  bra: "Wire-free contour cups in breathable fabric.",
+  panty: "Mid-rise hipster with a soft, no-dig waistband.",
+  print: "Playful prints on second-skin stretch fabric.",
+  brief: "Classic brief with a branded comfort waistband.",
+  trunk: "Snug boxer trunk with 4-way stretch.",
+};
+const FEATURES = {
+  bra: FEATURES_BY_PRODUCT.bra,
+  panty: FEATURES_BY_PRODUCT.panty,
+  print: FEATURES_BY_PRODUCT.panty,
+  brief: FEATURES_BY_PRODUCT.brief,
+  trunk: FEATURES_BY_PRODUCT.boxer,
+} satisfies Record<RailCategory, unknown>;
+const realSize = (p: Product & { category: RailCategory }) => {
   const w = WIDTH_CM[p.category];
-  return { w, h: w / ratio };
+  return { w, h: (w * p.h) / p.w };
 };
 const REAL = PRODUCTS.map(realSize);
 const MAX_W_CM = Math.max(...REAL.map((s) => s.w));
 const MAX_H_CM = Math.max(...REAL.map((s) => s.h));
 const MIN_W_CM = Math.min(...REAL.map((s) => s.w));
 
-const firstIndexOf = (c: ProductCategory) => PRODUCTS.findIndex((p) => p.category === c);
+const firstIndexOf = (c: RailCategory) => PRODUCTS.findIndex((p) => p.category === c);
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])) as Record<
-  ProductCategory,
+  RailCategory,
   string
 >;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const mod = (v: number) => ((v % N) + N) % N;
 /** Signed distance on the loop, in [-HALF, N - HALF). */
 const loopDist = (i: number, active: number) => mod(i - active + HALF) - HALF;
-const isTop = (p: Product) => p.category === "top";
 
 type Geo = {
   W: number;
@@ -93,12 +110,13 @@ type Geo = {
 function computeGeo(W: number, H: number): Geo {
   const hangerH = clamp(H * 0.1, 30, 56);
   const floor = clamp(H * 0.06, 14, 36);
-  const share = W < 640 ? 0.9 : W / H < 1.05 ? 0.74 : 0.42; // widest garment vs stage width
-  const shoulder = hangerH * 0.62;
-  const ppc = Math.min((H - 10 - shoulder - floor) / MAX_H_CM, (W * share) / MAX_W_CM); // px per cm
+  const phone = W < 640;
+  const share = phone ? 0.74 : W / H < 1.05 ? 0.6 : 0.3; // widest garment vs stage width
+  const fill = phone ? 1 : 0.78; // share of the free height the tallest garment may use
+  const ppc = Math.min(((H - 10 - hangerH - floor) * fill) / MAX_H_CM, (W * share) / MAX_W_CM); // px per cm
   const sizes = REAL.map((s) => ({ w: s.w * ppc, h: s.h * ppc }));
-  const tallest = shoulder + MAX_H_CM * ppc;
-  const railY = clamp((H - floor - tallest) / 2, 8, H * 0.18);
+  const tallest = hangerH + MAX_H_CM * ppc;
+  const railY = clamp((H - floor - tallest) / 2, 8, H * 0.22);
 
   // Side garments are packed tightly, but the loop must always reach past both edges
   // so items wrapping round the back are never seen jumping.
@@ -119,38 +137,11 @@ const extraFor = (g: Geo, active: number) => {
 
 /* ── Hanger artwork ──────────────────────────────────────────────────────── */
 
-function Hanger({ w, h, kind }: { w: number; h: number; kind: "clip" | "bra" | "shoulder" }) {
+function Hanger({ w, h, kind }: { w: number; h: number; kind: "clip" | "bra" }) {
   const cx = w / 2;
   const barY = h * 0.6;
   const hookR = Math.min(h * 0.17, 10);
   const hook = `M${cx} ${barY} V${hookR * 2.1} C${cx} ${hookR * 0.2} ${cx + hookR * 1.9} ${hookR * 0.2} ${cx + hookR * 1.9} ${hookR * 1.5} C${cx + hookR * 1.9} ${hookR * 2.3} ${cx + hookR * 1.2} ${hookR * 2.6} ${cx + hookR * 0.7} ${hookR * 2.4}`;
-  if (kind === "shoulder") {
-    const sw = w * 0.98;
-    const x0 = cx - sw / 2;
-    return (
-      <svg
-        aria-hidden
-        width={w}
-        height={h * 1.55}
-        className="absolute left-0 top-0 overflow-visible"
-      >
-        <path
-          d={hook}
-          fill="none"
-          stroke="url(#hr-brass)"
-          strokeWidth={2.4}
-          strokeLinecap="round"
-        />
-        <path
-          d={`M${cx} ${barY} L${x0 + 6} ${h * 1.42} Q${x0} ${h * 1.5} ${x0 + 10} ${h * 1.5} H${x0 + sw - 10} Q${x0 + sw} ${h * 1.5} ${x0 + sw - 6} ${h * 1.42} Z`}
-          fill="none"
-          stroke="#2b1b20"
-          strokeWidth={4}
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
   const inset = kind === "bra" ? w * 0.16 : w * 0.05;
   const clipW = Math.max(6, w * 0.035);
   const clips = [inset, w - inset];
@@ -222,7 +213,7 @@ const HangerItem = memo(function HangerItem({
   onPick,
 }: ItemProps) {
   const isActive = d === 0;
-  const kind = isTop(product) ? "shoulder" : product.category === "bra" ? "bra" : "clip";
+  const kind = product.category === "bra" ? "bra" : "clip";
 
   // Position spring → velocity → pendulum sway (garment trails the rail's motion).
   const target = useMotionValue(x);
@@ -247,7 +238,7 @@ const HangerItem = memo(function HangerItem({
   const swayTarget = useTransform(vel, (v) => clamp(v * 0.0065, -9, 9));
   const sway = useSpring(swayTarget, { stiffness: 70, damping: 7, mass: 0.7 });
 
-  const garmentTop = kind === "shoulder" ? hangerH * 0.62 : hangerH;
+  const garmentTop = hangerH;
   const hookLift = hangerH * 0.14; // hook curls over the rail
   const near = Math.abs(d) <= 6;
   const turn = isActive ? 0 : d < 0 ? 180 - SIDE_ANGLE : SIDE_ANGLE; // crossing sides passes edge-on
@@ -286,7 +277,6 @@ const HangerItem = memo(function HangerItem({
             animate={{ rotateY: turn, scale: isActive ? 1 : 0.93 }}
             transition={{ type: "spring", stiffness: 120, damping: 19, mass: 0.9 }}
           >
-            {kind === "shoulder" && <Hanger w={w} h={hangerH} kind={kind} />}
             <img
               src={product.image}
               alt=""
@@ -298,7 +288,7 @@ const HangerItem = memo(function HangerItem({
               className="pointer-events-none absolute left-0 max-w-none select-none"
               style={{ top: garmentTop, width: w, height: h }}
             />
-            {kind !== "shoulder" && <Hanger w={w} h={hangerH} kind={kind} />}
+            <Hanger w={w} h={hangerH} kind={kind} />
           </motion.div>
         </motion.div>
       </motion.div>
@@ -330,11 +320,11 @@ const CategoryChip = memo(function CategoryChip({
   on,
   onSelect,
 }: {
-  id: ProductCategory;
+  id: RailCategory;
   label: string;
   product: Product;
   on: boolean;
-  onSelect: (c: ProductCategory) => void;
+  onSelect: (c: RailCategory) => void;
 }) {
   const light = product.hex === "#f2f2f2";
   return (
@@ -381,9 +371,7 @@ const CategoryChip = memo(function CategoryChip({
 
 /* ── Section ─────────────────────────────────────────────────────────────── */
 
-export type RailJump = { category: ProductCategory; nonce: number };
-
-export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
+export function NewArrivals() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
@@ -442,12 +430,6 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
     const t = setTimeout(() => select(active + 1), STEP_MS);
     return () => clearTimeout(t);
   }, [playing, active, select]);
-
-  /* External jumps (e.g. "Shop Men" from the collections cards) */
-  useEffect(() => {
-    if (!jump) return;
-    pick(firstIndexOf(jump.category));
-  }, [jump, pick]);
 
   const step = useCallback((dir: number) => pick(activeRef.current + dir), [pick]);
 
@@ -558,7 +540,7 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
   /* Category chips ↔ rail sync */
   const current = PRODUCTS[active]!;
   const activeCat = current.category;
-  const pickCategory = useCallback((c: ProductCategory) => pick(firstIndexOf(c)), [pick]);
+  const pickCategory = useCallback((c: RailCategory) => pick(firstIndexOf(c)), [pick]);
   useEffect(() => {
     const box = chipsRef.current;
     const chip = box?.querySelector<HTMLElement>(`[data-cat="${activeCat}"]`);
@@ -582,17 +564,14 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
   const catCount = PRODUCTS.filter((p) => p.category === activeCat).length;
   const catPos = active - firstIndexOf(activeCat) + 1;
   const activeSize = geo?.sizes[active];
-  const shadowY =
-    geo && activeSize
-      ? geo.railY + (isTop(current) ? geo.hangerH * 0.62 : geo.hangerH) + activeSize.h + 6
-      : 0;
+  const shadowY = geo && activeSize ? geo.railY + geo.hangerH + activeSize.h + 6 : 0;
 
   return (
     <section
       ref={sectionRef}
       id="shop"
-      aria-label="New arrivals"
-      className="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden pb-4 pt-[5.6rem] wide:pb-6 wide:pt-[6.4rem]"
+      aria-label="Shop by collection"
+      className="relative flex h-[100svh] min-h-[560px] flex-col overflow-hidden pb-3 pt-[5.2rem] sm:pb-4 sm:pt-[5.6rem] wide:pb-6 wide:pt-[6.4rem]"
     >
       <svg width="0" height="0" className="absolute" aria-hidden>
         <defs>
@@ -605,20 +584,20 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
       </svg>
 
       {/* Heading + category chips */}
-      <div className="mx-auto flex w-full max-w-6xl shrink-0 flex-col gap-3 px-5 xl:flex-row xl:items-end xl:justify-between">
+      <div className="mx-auto flex w-full max-w-6xl shrink-0 flex-col gap-2.5 px-5 sm:gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-            The collection
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary sm:text-xs">
+            The Collections
           </p>
-          <h2 className="mt-2 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl [@media(max-height:720px)]:text-4xl">
-            New <span className="font-semibold italic text-primary">arrivals</span>
+          <h2 className="mt-1.5 whitespace-nowrap font-display text-[2rem] font-bold leading-none sm:mt-2 sm:text-5xl lg:text-6xl [@media(max-height:720px)]:text-[2rem] [@media(max-height:720px)]:sm:text-4xl">
+            Shop by <span className="font-semibold italic text-primary">collection</span>
           </h2>
         </div>
         <div
           ref={chipsRef}
           role="tablist"
           aria-label="Product categories"
-          className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1 xl:mx-0 xl:px-0"
+          className="no-scrollbar -mx-5 flex min-w-0 gap-2 overflow-x-auto px-5 py-1 2xl:mx-0 2xl:px-0"
         >
           {CATEGORIES.map((c) => {
             const on = c.id === activeCat;
@@ -656,7 +635,7 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className="relative mt-3 min-h-0 flex-1 select-none overflow-hidden outline-none [touch-action:pan-y] wide:mt-5"
+        className="relative mt-2 min-h-0 flex-1 select-none overflow-hidden outline-none [touch-action:pan-y] sm:mt-3 wide:mt-5"
         style={
           {
             contain: "layout paint",
@@ -746,64 +725,94 @@ export function NewArrivals({ jump }: { jump?: RailJump | undefined }) {
           ))}
       </div>
 
-      {/* Active product + controls */}
-      <div className="mx-auto mt-2 flex w-full max-w-6xl shrink-0 items-center gap-3 px-5 wide:mt-3">
-        <button
-          type="button"
-          aria-label="Previous product"
-          onClick={() => step(-1)}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 transition-colors hover:border-primary hover:text-primary"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+      {/* Active product card: name, colour, sizes + controls. A card on phones (fills the
+          space under the rail); a slim bar between the arrows on larger screens. */}
+      <div className="mx-auto mt-2 w-full max-w-6xl shrink-0 px-4 sm:px-5 wide:mt-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2.5 rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-3 py-3 shadow-[0_14px_36px_-22px_rgba(90,30,50,0.5)] sm:gap-x-3 sm:gap-y-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none [@media(max-height:640px)]:py-2">
+          <button
+            type="button"
+            aria-label="Previous product"
+            onClick={() => step(-1)}
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 transition-colors hover:border-primary hover:text-primary sm:row-span-2 sm:h-11 sm:w-11"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
 
-        <div
-          className="min-w-0 flex-1 text-center"
-          aria-live={manual ? "polite" : "off"}
-          aria-atomic
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={current.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22 }}
+          <div className="min-w-0 text-center" aria-live={manual ? "polite" : "off"} aria-atomic>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22 }}
+              >
+                <p className="truncate font-display text-lg font-semibold leading-tight sm:text-2xl">
+                  {current.name}
+                </p>
+                <p className="mt-0.5 flex items-center justify-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-xs sm:tracking-[0.18em]">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: current.hex }}
+                  />
+                  <span className="truncate">
+                    {current.colour} · {CATEGORY_LABEL[activeCat]} {catPos}/{catCount}
+                  </span>
+                </p>
+                <p className="mt-1.5 text-xs leading-snug text-muted-foreground sm:hidden [@media(max-height:700px)]:hidden">
+                  {TAGLINE[activeCat]}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Next product"
+            onClick={() => step(1)}
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 transition-colors hover:border-primary hover:text-primary sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:h-11 sm:w-11"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Phones with room to spare: the fabric features, as on the colour slider */}
+          <FeatureRow
+            features={FEATURES[activeCat]}
+            color={current.hex === "#f2f2f2" ? "#6b5a5d" : current.hex}
+            className="col-span-3 border-y border-[#2a1216]/8 py-2.5 sm:hidden [@media(max-height:760px)]:hidden"
+          />
+
+          {/* Available sizes + the dwell progress */}
+          <div className="col-span-3 flex flex-col items-center sm:col-span-1 sm:col-start-2">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:hidden">
+              Available sizes
+            </p>
+            <ul
+              aria-label="Available sizes"
+              className="flex flex-wrap items-center justify-center gap-1.5"
             >
-              <p className="truncate font-display text-xl font-semibold leading-tight sm:text-2xl">
-                {current.name}
-              </p>
-              <p className="mt-0.5 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-xs">
-                <span
-                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
-                  style={{ backgroundColor: current.hex }}
+              {SIZES.map((sz) => (
+                <li
+                  key={sz}
+                  className="flex h-7 min-w-9 items-center justify-center rounded-full border border-border bg-background/80 px-2 text-[11px] font-semibold tracking-wide text-foreground/80 sm:h-6 sm:min-w-8 sm:text-[10.5px]"
+                >
+                  {sz}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 h-[2px] w-24 overflow-hidden rounded-full bg-foreground/10">
+              {playing && (
+                <motion.span
+                  key={`p-${active}`}
+                  className="block h-full origin-left rounded-full bg-primary"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: STEP_MS / 1000, ease: "linear" }}
                 />
-                {current.colour} · {CATEGORY_LABEL[activeCat]} {catPos}/{catCount}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-          {/* 1-second dwell progress */}
-          <div className="mx-auto mt-2 h-[2px] w-24 overflow-hidden rounded-full bg-foreground/10">
-            {playing && (
-              <motion.span
-                key={`p-${active}`}
-                className="block h-full origin-left rounded-full bg-primary"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: STEP_MS / 1000, ease: "linear" }}
-              />
-            )}
+              )}
+            </div>
           </div>
         </div>
-
-        <button
-          type="button"
-          aria-label="Next product"
-          onClick={() => step(1)}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 transition-colors hover:border-primary hover:text-primary"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
       </div>
     </section>
   );

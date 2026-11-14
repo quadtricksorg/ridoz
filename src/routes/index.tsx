@@ -18,7 +18,7 @@ import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
 import { productById } from "@/data/products";
-import { NewArrivals, type RailJump } from "@/components/new-arrivals/hanger-rail";
+import { NewArrivals } from "@/components/new-arrivals/hanger-rail";
 import fabric from "@/assets/fabric.jpg";
 import silkRibbon from "@/assets/silk-ribbon.jpg";
 
@@ -133,7 +133,7 @@ function Header() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
   });
-  const links = ["Drop", "Designs", "Shop", "Collections", "Reviews", "Contact"];
+  const links = ["Drop", "Designs", "Shop", "Reviews", "Contact"];
   const [activeSection, setActiveSection] = useState("Drop");
 
   useEffect(() => {
@@ -586,131 +586,6 @@ function Marquee() {
   );
 }
 
-type Col = { t: string; s: string; n: string; items: string; tint: string; pics: { src: string; alt: string }[] };
-
-/** Fanned stack of cut-out products; spreads on hover and follows the pointer in layers. */
-function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: ((category: string) => void) | undefined }) {
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const px = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 18 });
-  const py = useSpring(useTransform(my, [-0.5, 0.5], [-8, 8]), { stiffness: 120, damping: 18 });
-  const move = (e: MouseEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-  const moveTouch = (e: TouchEvent<HTMLElement>) => {
-    if (!e.touches[0]) return;
-    const t = e.touches[0];
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((t.clientX - r.left) / r.width - 0.5);
-    my.set((t.clientY - r.top) / r.height - 0.5);
-  };
-  const endTouch = () => {
-    mx.set(0);
-    my.set(0);
-  };
-  const mid = (c.pics.length - 1) / 2;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onSelect?.(c.t);
-    const shopEl = document.getElementById("shop");
-    if (shopEl) {
-      shopEl.scrollIntoView({ behavior: "smooth" });
-      window.history.pushState(null, "", "#shop");
-    }
-  };
-  return (
-    <motion.a
-      href="#shop"
-      onClick={handleClick}
-      aria-label={`Shop ${c.t}'s collection`}
-      onMouseMove={move}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      onTouchMove={moveTouch}
-      onTouchEnd={endTouch}
-      initial="rest"
-      whileInView="show"
-      whileHover="hover"
-      viewport={{ once: true, margin: "-60px" }}
-      variants={{ rest: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0 }, hover: { opacity: 1, y: -6 } }}
-      transition={{ duration: 0.8, delay: i * 0.15, ease }}
-      className="group relative flex min-h-[340px] overflow-hidden rounded-[2rem] border border-border p-6 sm:min-h-[380px] sm:p-9"
-      style={{ backgroundColor: `color-mix(in oklab, ${c.tint} 24%, var(--card))` }}
-    >
-      <motion.span
-        aria-hidden
-        variants={{ rest: { scale: 0.6, opacity: 0 }, show: { scale: 1, opacity: 1 }, hover: { scale: 1.08, opacity: 1 } }}
-        transition={{ duration: 0.9, ease }}
-        className="pointer-events-none absolute -right-4 sm:-right-8 md:-right-4 lg:-right-12 top-1/2 aspect-square w-[58%] sm:w-[64%] md:w-[54%] lg:w-[65%] -translate-y-1/2 rounded-full opacity-40"
-        style={{ backgroundColor: c.tint }}
-      />
-      <div className="relative z-10 flex w-full max-w-[55%] sm:max-w-[52%] md:max-w-[48%] lg:max-w-[52%] flex-col justify-between">
-        <div>
-          <span className="font-display text-xl font-semibold text-primary [font-variant-numeric:lining-nums]">{c.n}</span>
-          <p className="mt-1 text-[11px] sm:text-xs font-semibold uppercase tracking-wider sm:tracking-[0.2em] text-muted-foreground leading-snug break-words">
-            {c.items}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs sm:text-sm text-muted-foreground">{c.s}</p>
-          <h3 className="mt-1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-none">{c.t}</h3>
-          <Magnet strength={0.4} className="mt-4 sm:mt-5">
-            <span className="btn-sweep inline-flex min-h-11 items-center gap-2 rounded-full border border-primary px-4 sm:px-5 text-xs sm:text-sm font-semibold text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] group-hover:text-primary-foreground">
-              Shop {c.t} <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:rotate-45" />
-            </span>
-          </Magnet>
-        </div>
-      </div>
-      <motion.div style={{ x: px, y: py }} className="pointer-events-none absolute inset-y-0 right-0 w-[54%] sm:w-[58%] md:w-[48%] lg:w-[56%]">
-        {c.pics.map((pic, k) => {
-          const o = k - mid;
-          return (
-            <motion.img
-              key={pic.alt}
-              src={pic.src}
-              alt={pic.alt}
-              loading="lazy"
-              width={800}
-              height={1000}
-              variants={{
-                rest: { opacity: 0, y: 50, rotate: 0, x: 0 },
-                show: { opacity: 1, y: 0, rotate: o * 7, x: o * 18 },
-                hover: { opacity: 1, y: -8, rotate: o * 12, x: o * 30 },
-              }}
-              transition={{ type: "spring", stiffness: 140, damping: 16, delay: 0.25 + k * 0.1 }}
-              style={{ zIndex: 10 - Math.abs(Math.round(o * 2)) }}
-              className="drop-product absolute left-1/2 top-1/2 aspect-square w-[60%] sm:w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
-            />
-          );
-        })}
-      </motion.div>
-    </motion.a>
-  );
-}
-
-function Collections({ onSelectCollection }: { onSelectCollection?: (category: string) => void } = {}) {
-  const cols: Col[] = [
-    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Maroon trunk" }, { src: vest, alt: "Classic cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
-    { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Deep teal hipster" }] },
-  ];
-  return (
-    <section id="collections" className="mx-auto max-w-6xl px-5 pb-12 sm:pb-16 md:pb-24">
-      <div className="mb-6 sm:mb-10 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Eyebrow>Two worlds</Eyebrow>
-          <SplitHeading className="mt-3 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl" lines={[{ text: "Shop by" }, { text: "collection", className: "italic font-semibold text-primary" }]} />
-        </div>
-        <Reveal><p className="max-w-xs text-sm leading-relaxed text-muted-foreground">Two worlds of everyday comfort — pick yours and never look back.</p></Reveal>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {cols.map((c, i) => <CollectionCard key={c.t} c={c} i={i} onSelect={onSelectCollection} />)}
-      </div>
-    </section>
-  );
-}
-
 function Feature() {
   const feats = [
     { i: Wind, t: "Breathable", d: "Micro-modal airflow" },
@@ -850,7 +725,6 @@ if (typeof window !== "undefined") {
 }
 
 function Index() {
-  const [railJump, setRailJump] = useState<RailJump>();
 
   // Always come to top on refresh or load
   useEffect(() => {
@@ -892,8 +766,7 @@ function Index() {
         <ProductShowcaseSlider />
         <TrioBoxShowcase />
         <Marquee />
-        <NewArrivals jump={railJump} />
-        <Collections onSelectCollection={(cat) => setRailJump({ category: cat === "Men" ? "brief" : "bra", nonce: Date.now() })} />
+        <NewArrivals />
         <Feature />
         <Reviews />
       </main>

@@ -213,7 +213,7 @@ function SlideStationaryBraLayer({
       className="absolute inset-0 h-full w-full pointer-events-none"
       style={{ zIndex: 30 + index }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-[var(--pc-m)] sm:top-[50%] md:top-[53%] lg:top-[54%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[var(--pc-m)] sm:top-[50%] md:top-[53%] lg:top-[50%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
             !hasTransparency ? "rounded-3xl border border-border/40 bg-card/30 p-4" : ""
@@ -226,7 +226,7 @@ function SlideStationaryBraLayer({
             fetchPriority={index === 0 ? "high" : "auto"}
             decoding="async"
             draggable={false}
-            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none will-change-[transform,opacity]"
+            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[max(300px,min(440px,calc(100vw-760px)))] xl:max-w-[min(500px,calc(100vw-860px))] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[46vh] object-contain select-none will-change-[transform,opacity]"
             style={{ x, scale, opacity, visibility }}
           />
         </div>
@@ -360,11 +360,11 @@ function ProductInfoCardItem({
       */}
       <motion.div
         data-slide-stack
-        className="absolute z-[60] inset-x-4 bottom-[3.4rem] sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[300px] md:max-w-[330px] lg:max-w-[410px] xl:max-w-[440px] will-change-[transform,opacity]"
+        className="absolute z-[60] inset-x-4 bottom-[3.4rem] sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[300px] md:max-w-[330px] lg:max-w-[310px] xl:max-w-[340px] will-change-[transform,opacity]"
         style={{ opacity, y, pointerEvents, visibility: useTransform(opacity, hiddenWhenClear) }}
       >
         {/* Solid (non-blurred) card: a backdrop blur over moving layers is re-computed every scroll frame */}
-        <div className="mx-auto max-w-md sm:max-w-none text-center sm:text-left rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-4 py-3.5 sm:p-4 md:p-5 lg:p-6 shadow-[0_18px_44px_-22px_rgba(90,30,50,0.45)]">
+        <div className="mx-auto max-w-md sm:max-w-none text-center sm:text-left rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-4 py-3.5 sm:p-4 md:p-5 lg:px-5 lg:py-4 shadow-[0_18px_44px_-22px_rgba(90,30,50,0.45)]">
           <div className="flex items-center justify-center sm:justify-start gap-2 mb-1 sm:mb-2">
             <span
               className="inline-flex h-2 w-2 rounded-full shrink-0"
@@ -382,7 +382,7 @@ function ProductInfoCardItem({
           </div>
 
           <h3
-            className="font-display text-[1.35rem] sm:text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight"
+            className="font-display text-[1.35rem] sm:text-xl md:text-2xl lg:text-[1.65rem] font-bold tracking-tight leading-tight"
             style={{ color: slide.darkColor }}
           >
             {slide.productName}
@@ -394,7 +394,7 @@ function ProductInfoCardItem({
 
           {/* Feature icons (hidden on very short phones to keep everything on one screen) */}
           {features && (
-            <div className="mt-3 border-t border-[#2a1216]/8 pt-3 lg:mt-4 lg:pt-4 max-sm:[@media(max-height:700px)]:hidden">
+            <div className="mt-3 border-t border-[#2a1216]/8 pt-3 max-sm:[@media(max-height:700px)]:hidden">
               {features}
             </div>
           )}

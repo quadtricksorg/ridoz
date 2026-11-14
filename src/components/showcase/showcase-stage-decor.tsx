@@ -35,6 +35,7 @@ type Anchor = {
   secW: number;
   secH: number;
   stackTop: number | null; // top of the phone bottom stack (card + selector + CTA)
+  stackRight: number | null; // right edge of the content card (side card on larger screens)
 };
 type Bounds = { top: number; bottom: number; left: number; right: number }; // 0–1 fractions
 
@@ -136,6 +137,7 @@ function useProductAnchor(
         const bottom = y0 + v.bottom * drawH;
         // The stack's own entrance offset (translateY) is ignored by offsetTop.
         const stackTop = stack && stack.offsetHeight ? stack.offsetTop : null;
+        const stackRight = stack && stack.offsetWidth ? stack.offsetLeft + stack.offsetWidth : null;
         setAnchor({
           cx: (left + right) / 2 - s.left,
           cy: (top + bottom) / 2 - s.top,
@@ -144,6 +146,7 @@ function useProductAnchor(
           secW: s.width,
           secH: s.height,
           stackTop,
+          stackRight,
         });
       });
     };
@@ -246,13 +249,16 @@ export function ShowcaseStage({
         ? 285
         : tablet
           ? 205
-          : 72
+          : 66
     : 0;
+  const desktop = !mobile && !tablet;
   const podiumW = a
     ? Math.min(
-        a.size * 1.45,
-        a.secW * (mobile ? 0.82 : 0.42),
-        600,
+        a.size * (desktop ? 1.55 : 1.45),
+        a.secW * (mobile ? 0.82 : desktop ? 0.5 : 0.42),
+        desktop ? 660 : 600,
+        // never under the side content card
+        desktop && a.stackRight !== null ? Math.max(0, (a.cx - a.stackRight - 8) * 2) : Infinity,
         Math.max(0, (a.secH - reserveBottom - a.bottom - 14) * 4),
       )
     : 0;
@@ -459,16 +465,16 @@ export function FeatureRow({
   className?: string;
 }) {
   return (
-    <ul className={`grid grid-cols-4 ${className}`}>
+    <ul className={`flex ${className}`}>
       {features.map(({ icon: Icon, label }, i) => (
         <li
           key={label.join(" ")}
-          className={`flex flex-col items-center gap-1 px-1 text-center text-[10.5px] font-medium leading-tight text-[#2f1e20] sm:text-[11px] lg:text-[12px] ${
+          className={`flex min-w-fit flex-1 flex-col items-center gap-1 px-1 text-center text-[10.5px] font-medium leading-tight text-[#2f1e20] sm:text-[11px] ${
             i < features.length - 1 ? "border-r border-[#2a1216]/10" : ""
           }`}
         >
           <span style={{ color }}>
-            <Icon className="h-6 w-6 lg:h-7 lg:w-7" />
+            <Icon className="h-6 w-6" />
           </span>
           <span>
             {label[0]}
