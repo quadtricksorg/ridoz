@@ -261,7 +261,8 @@ async function decor() {
   await sharp(Buffer.from(podiumSvg)).resize({ width: 1100 }).webp({ quality: 82, effort: 6 }).toFile(path.join(OUT, "podium.webp"));
 }
 
-await pantyPipeline();
+// Panties now come from real product photos: see scratch/generate-trio-panties.mjs
+// await pantyPipeline();
 await decor();
 for (const f of fs.readdirSync(OUT)) {
   const m = await sharp(path.join(OUT, f)).metadata();

@@ -9,12 +9,18 @@ import {
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Check, Feather, Layers, ShieldCheck } from "lucide-react";
 
-import pantyRaniPink from "@/assets/showcase/trio/panty-rani-pink.webp";
 import pantyRoseClay from "@/assets/showcase/trio/panty-rose-clay.webp";
+import pantyRoseClayFolded from "@/assets/showcase/trio/panty-rose-clay-folded.webp";
+import pantyRaniPink from "@/assets/showcase/trio/panty-rani-pink.webp";
+import pantyRaniPinkFolded from "@/assets/showcase/trio/panty-rani-pink-folded.webp";
 import pantyMidnightNavy from "@/assets/showcase/trio/panty-midnight-navy.webp";
+import pantyMidnightNavyFolded from "@/assets/showcase/trio/panty-midnight-navy-folded.webp";
 import pantyOrchidMauve from "@/assets/showcase/trio/panty-orchid-mauve.webp";
-import pantyEmerald from "@/assets/showcase/trio/panty-emerald.webp";
+import pantyOrchidMauveFolded from "@/assets/showcase/trio/panty-orchid-mauve-folded.webp";
 import pantyCherryRed from "@/assets/showcase/trio/panty-cherry-red.webp";
+import pantyCherryRedFolded from "@/assets/showcase/trio/panty-cherry-red-folded.webp";
+import pantyDeepTeal from "@/assets/showcase/trio/panty-deep-teal.webp";
+import pantyDeepTealFolded from "@/assets/showcase/trio/panty-deep-teal-folded.webp";
 import silkCrimson from "@/assets/showcase/trio/silk-crimson.webp";
 import silkSky from "@/assets/showcase/trio/silk-sky.webp";
 import podium from "@/assets/showcase/trio/podium.webp";
@@ -31,7 +37,7 @@ import ridozWordmark from "@/assets/showcase/trio/ridoz-wordmark.webp";
  * so nothing is tinted, blurred or blended at runtime — animations are transform/opacity only.
  */
 
-type Panty = { name: string; color: string; image: string };
+type Panty = { name: string; color: string; image: string; folded: string };
 type BoxVariant = {
   id: string;
   label: string;
@@ -57,9 +63,9 @@ const BOXES: BoxVariant[] = [
     ui: "#a51538",
     silk: silkCrimson,
     panties: [
-      { name: "Orchid Mauve", color: "#b4609f", image: pantyOrchidMauve },
-      { name: "Emerald", color: "#119270", image: pantyEmerald },
-      { name: "Cherry Red", color: "#c8102e", image: pantyCherryRed },
+      { name: "Orchid Mauve", color: "#95566f", image: pantyOrchidMauve, folded: pantyOrchidMauveFolded },
+      { name: "Cherry Red", color: "#a3131f", image: pantyCherryRed, folded: pantyCherryRedFolded },
+      { name: "Deep Teal", color: "#0f6b66", image: pantyDeepTeal, folded: pantyDeepTealFolded },
     ],
   },
   {
@@ -73,14 +79,14 @@ const BOXES: BoxVariant[] = [
     ui: "#0f6f9f",
     silk: silkSky,
     panties: [
-      { name: "Rani Pink", color: "#e0336b", image: pantyRaniPink },
-      { name: "Rose Clay", color: "#c27f6c", image: pantyRoseClay },
-      { name: "Midnight Navy", color: "#26336f", image: pantyMidnightNavy },
+      { name: "Rose Clay", color: "#9a4a3a", image: pantyRoseClay, folded: pantyRoseClayFolded },
+      { name: "Rani Pink", color: "#e2125c", image: pantyRaniPink, folded: pantyRaniPinkFolded },
+      { name: "Midnight Navy", color: "#1b2140", image: pantyMidnightNavy, folded: pantyMidnightNavyFolded },
     ],
   },
 ];
 
-const ALL_PANTY_IMAGES = BOXES.flatMap((b) => b.panties.map((p) => p.image));
+const ALL_PANTY_IMAGES = BOXES.flatMap((b) => b.panties.flatMap((p) => [p.image, p.folded]));
 
 const AUTOPLAY_MS = 2800;
 const WIDE_QUERY = "(min-width: 1024px), (min-width: 768px) and (orientation: landscape)"; // keep in sync with @custom-variant wide
@@ -98,10 +104,13 @@ const SIDE_W = 5; // side face width
 const WIN = { left: 14.5, width: 71, top: 3, height: 34 }; // % of front face
 const COL_W = WIN.width / 3;
 const PANTY_W = 23; // panty width in the window
-const PANTY_ASPECT = 742 / 650; // trimmed source aspect
+const PANTY_ASPECT = 760 / 560; // shared canvas of the full panty images
 const PANTY_H = PANTY_W / PANTY_ASPECT;
 const PANTY_TOP = (WIN.top / 100) * BOX_H + 4; // waistband sits a little below the window top
 const LIFT_SCALE = 2;
+const FOLD_W = 20; // folded piece resting in the window (480×240 source)
+const FOLD_H = FOLD_W / 2;
+const FOLD_TOP = ((WIN.top + WIN.height) / 100) * BOX_H - FOLD_H - 0.9; // rests on the window floor
 const LIFT_GAP = 2.5; // gap between lifted panty and the box top
 const HEADROOM = TOP_D + LIFT_GAP + PANTY_H * LIFT_SCALE + 1.5;
 const colCenter = (i: number) => WIN.left + COL_W * (i + 0.5);
@@ -600,31 +609,57 @@ function Carton({ box, active, lifted }: { box: BoxVariant; active: number; lift
         const dx = ((50 - colCenter(i)) / PANTY_W) * 100; // → centre of the box, in % of panty width
         const dy = ((-(PANTY_TOP + PANTY_H) - TOP_D - LIFT_GAP) / PANTY_H) * 100; // bottom above the box top
         return (
-          <motion.img
-            key={p.name}
-            src={p.image}
-            alt=""
-            aria-hidden
-            width={560}
-            height={491}
-            draggable={false}
-            decoding="async"
-            className="pointer-events-none absolute z-10 max-w-none select-none"
-            style={{
-              left: cq(colCenter(i) - PANTY_W / 2),
-              top: cq(PANTY_TOP),
-              width: cq(PANTY_W),
-              transformOrigin: "50% 100%",
-              willChange: "transform",
-            }}
-            initial={false}
-            animate={
-              isUp
-                ? { x: `${dx}%`, y: `${dy}%`, scale: LIFT_SCALE }
-                : { x: "0%", y: "0%", scale: 1 }
-            }
-            transition={liftSpring}
-          />
+          <div key={p.name} className="contents">
+            {/* Folded piece resting in the box */}
+            <motion.img
+              src={p.folded}
+              alt=""
+              aria-hidden
+              width={480}
+              height={240}
+              draggable={false}
+              decoding="async"
+              className="pointer-events-none absolute z-10 max-w-none select-none"
+              style={{
+                left: cq(colCenter(i) - FOLD_W / 2),
+                top: cq(FOLD_TOP),
+                width: cq(FOLD_W),
+                filter: "drop-shadow(0 0.5cqw 0.6cqw rgba(0,0,0,0.45))",
+                willChange: "transform, opacity",
+              }}
+              initial={false}
+              animate={isUp ? { opacity: 0, y: "-35%", scale: 1.04 } : { opacity: 1, y: "0%", scale: 1 }}
+              transition={{ duration: isUp ? 0.28 : 0.45, ease, delay: isUp ? 0 : 0.18 }}
+            />
+            {/* Full panty — unfolds as it lifts out */}
+            <motion.img
+              src={p.image}
+              alt=""
+              aria-hidden
+              width={760}
+              height={560}
+              draggable={false}
+              decoding="async"
+              className="pointer-events-none absolute z-10 max-w-none select-none"
+              style={{
+                left: cq(colCenter(i) - PANTY_W / 2),
+                top: cq(PANTY_TOP),
+                width: cq(PANTY_W),
+                transformOrigin: "50% 100%",
+                willChange: "transform, opacity",
+              }}
+              initial={false}
+              animate={
+                isUp
+                  ? { x: `${dx}%`, y: `${dy}%`, scaleX: LIFT_SCALE, scaleY: LIFT_SCALE, opacity: 1 }
+                  : { x: "0%", y: "0%", scaleX: 0.85, scaleY: 0.45, opacity: 0 }
+              }
+              transition={{
+                ...liftSpring,
+                opacity: { duration: isUp ? 0.22 : 0.3, ease, delay: isUp ? 0.04 : 0 },
+              }}
+            />
+          </div>
         );
       })}
 
