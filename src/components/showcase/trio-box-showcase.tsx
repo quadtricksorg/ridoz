@@ -20,6 +20,7 @@ import silkSky from "@/assets/showcase/trio/silk-sky.webp";
 import podium from "@/assets/showcase/trio/podium.webp";
 import cotton from "@/assets/showcase/trio/cotton.webp";
 import leafShadow from "@/assets/showcase/trio/leaf-shadow.webp";
+import ridozWordmark from "@/assets/showcase/trio/ridoz-wordmark.webp";
 
 /**
  * "The 3-Piece Box" — the RIDOZ Panties window carton on a stone podium.
@@ -684,43 +685,22 @@ function Carton({ box, active, lifted }: { box: BoxVariant; active: number; lift
           className="absolute flex flex-col items-center"
           style={{ left: "30%", width: "38%", top: "47%" }}
         >
-          <div className="relative leading-none">
-            <span
-              className="block font-sans font-extrabold"
-              style={{
-                color: box.logo,
-                fontSize: cq(9),
-                letterSpacing: "-0.015em",
-                transform: "scaleY(1.15)",
-              }}
-            >
-              RIDOZ
-            </span>
-            <span
-              className="absolute font-sans"
-              style={{ color: box.logo, fontSize: cq(1.2), top: cq(-0.4), right: cq(-1.7) }}
-            >
-              ®
-            </span>
-          </div>
+          {/* Brand wordmark (RIDOZ with "Style" in the O), tinted per box via mask */}
           <div
-            className="relative w-full"
-            style={{ marginTop: cq(1.3), height: cq(0.22), backgroundColor: box.logo }}
-          >
-            <span
-              className="absolute left-1/2 -translate-x-1/2"
-              style={{
-                color: box.logo,
-                fontFamily: "'Kaushan Script', cursive",
-                fontSize: cq(1.5),
-                top: cq(-1.25),
-                padding: `0 ${cq(0.6)}`,
-                background: box.bg,
-              }}
-            >
-              Style
-            </span>
-          </div>
+            role="img"
+            aria-label="RIDOZ Style"
+            className="w-full"
+            style={{
+              aspectRatio: "1200 / 347",
+              backgroundColor: box.logo,
+              WebkitMaskImage: `url(${ridozWordmark})`,
+              maskImage: `url(${ridozWordmark})`,
+              WebkitMaskSize: "100% 100%",
+              maskSize: "100% 100%",
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+            }}
+          />
           <div
             className="font-sans font-medium uppercase"
             style={{
