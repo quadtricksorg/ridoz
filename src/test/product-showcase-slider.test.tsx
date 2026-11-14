@@ -88,6 +88,18 @@ describe("ProductShowcaseSlider Data & Component", () => {
     expect(dots[2]).toHaveAttribute("aria-selected", "true");
   });
 
+  it("shows the product feature row in the info card and keeps it when switching colourways", () => {
+    render(<ProductShowcaseSlider />);
+
+    expect(screen.getAllByText(/natural/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/breathable/i).length).toBeGreaterThan(0);
+
+    const dots = screen.getAllByRole("tab");
+    fireEvent.click(dots[2]!);
+    expect(dots[2]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getAllByText(/breathable/i).length).toBeGreaterThan(0);
+  });
+
   it("handles keyboard navigation with ArrowRight, ArrowLeft, ArrowDown, ArrowUp", () => {
     render(<ProductShowcaseSlider />);
 
