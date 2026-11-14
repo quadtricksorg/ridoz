@@ -13,7 +13,7 @@ describe("Navbar Enquiry WhatsApp Button", () => {
     const enquiryButtons = screen.getAllByRole("link", { name: /^Enquiry$/i });
     expect(enquiryButtons.length).toBeGreaterThanOrEqual(1);
 
-    const desktopButton = enquiryButtons[0];
+    const desktopButton = enquiryButtons[0]!;
     expect(desktopButton).toBeDefined();
 
     const href = desktopButton.getAttribute("href");

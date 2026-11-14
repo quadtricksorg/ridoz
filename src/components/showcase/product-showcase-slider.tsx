@@ -28,19 +28,8 @@ import { FEATURES_BY_PRODUCT, FeatureRow, ShowcaseStage } from "@/components/sho
 const AUTOPLAY_MS = 3200;
 const AUTOPLAY_IDLE_MS = 4000;
 
-/**
- * Right-to-left wipe used by the background + product layers, expressed as a
- * translate percentage instead of an animated clip-path: an outer frame slides
- * in from the right (overflow hidden) while its content counter-slides, so the
- * picture stays still. Transforms are composited on the GPU, so scrolling no
- * longer repaints/re-rasterises the full-screen product layers every frame.
- */
-function revealShift(p: number, index: number, isReducedMotion: boolean) {
-  if (isReducedMotion || index === 0) return 0;
-  if (p <= index - 1) return 100;
-  if (p < index) return (index - p) * 100;
-  return 0;
-}
+/** Fully transparent layers are hidden so they drop out of compositing while scrolling. */
+const hiddenWhenClear = (o: number) => (o <= 0.001 ? "hidden" : "visible");
 
 // Lightweight, delicate botanical small flower designs for the moving accent layer
 function DelicateBlossomFlower({ className, color }: { className?: string; color: string }) {
@@ -108,70 +97,6 @@ function MiniDaisyFlower({ className, color }: { className?: string; color: stri
 }
 
 /**
- * SlideBackgroundLayer Component:
- * Renders the dark plain background derived directly from the bra color.
- * Deep, rich, luxurious mood with subtle organic grain and soft ambient glow.
- * Masked smoothly via pure GPU clipPath.
- */
-function SlideBackgroundLayer({
-  slide,
-  index,
-  totalSlides,
-  progress,
-  isReducedMotion,
-}: {
-  slide: ShowcaseSlide;
-  index: number;
-  totalSlides: number;
-  progress: MotionValue<number>;
-  isReducedMotion: boolean;
-}) {
-  const clipPath = useTransform(progress, (p) => {
-    if (isReducedMotion || index === 0) return "none";
-    if (p <= index - 1) return "inset(0% 0% 0% 100%)";
-    if (p < index) {
-      const leftInset = ((index - p) * 100).toFixed(2);
-      return `inset(0% 0% 0% ${leftInset}%)`;
-    }
-    return "inset(0% 0% 0% 0%)";
-  });
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    if (index === 0) return p >= 1 ? 0 : 1;
-    if (p <= index - 1) return 0;
-    if (p < index + 1) return 1;
-    return 0;
-  });
-
-  const zIndex = 10 + index;
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
-      style={{ zIndex, clipPath, opacity }}
-    >
-      <div
-        className="absolute inset-0 h-full w-full"
-        style={{
-          // Dark plain background matching the bra color
-          background: `radial-gradient(circle at 50% 44%, ${slide.bgFrom} 0%, ${slide.bgTo} 100%)`,
-        }}
-      >
-        <div className="grain absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none" />
-        <div
-          className="absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: slide.braColor }}
-        />
-      </div>
-    </motion.div>
-  );
-}
-
-/**
  * SlideTitleBounceLayer Component:
  * Sits directly BEHIND the stationary product bra (z-20 range).
  * Comes from the left fast, overshoots to the right, and bounces back to center!
@@ -218,7 +143,7 @@ function SlideTitleBounceLayer({
     <motion.div
       aria-hidden="true"
       className="pointer-events-none absolute inset-x-0 top-[17%] sm:top-[22%] md:top-[23%] lg:top-[23%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
-      style={{ x, opacity }}
+      style={{ x, opacity, visibility: useTransform(opacity, hiddenWhenClear) }}
     >
       <span
         className="font-sans font-black uppercase tracking-[-0.035em] leading-none whitespace-nowrap select-none max-w-[92vw] overflow-hidden"
@@ -235,10 +160,30 @@ function SlideTitleBounceLayer({
 }
 
 /**
+ * Product pose for a slide at signed distance d = progress − index.
+ * The outgoing product drifts left and fades out completely in the first 40% of a
+ * transition; the incoming one only starts to appear after the halfway point and
+ * settles in from the right — so two products are never on screen together.
+ */
+const EXIT_END = 0.4;
+const ENTER_SPAN = 0.45;
+function productPose(p: number, index: number, reduced: boolean) {
+  const d = p - index;
+  if (reduced) return { o: Math.abs(d) < 0.5 ? 1 : 0, x: 0, s: 1 };
+  if (d >= 0) {
+    const t = Math.min(1, d / EXIT_END); // 0 → 1 while leaving
+    return { o: 1 - t, x: -90 * t * t, s: 1 - 0.07 * t };
+  }
+  const u = Math.min(1, -d / ENTER_SPAN); // 1 → 0 while arriving
+  const e = u * u; // ease-out arrival
+  return { o: 1 - u, x: 90 * e, s: 1 - 0.07 * e };
+}
+
+/**
  * SlideStationaryBraLayer Component:
- * Sits directly in front of the big title (z-30 range).
- * Product bra coordinates are pixel-locked to the exact center (NEVER translate).
- * Wipes in parallel with the background gradient from right to left.
+ * Sits in front of the big title (z-30 range). Only the <img> is transformed
+ * (translate / scale / opacity — compositor only); its frame never moves, so the
+ * stage decor can measure the resting layout box at any moment.
  */
 function SlideStationaryBraLayer({
   slide,
@@ -253,54 +198,40 @@ function SlideStationaryBraLayer({
   progress: MotionValue<number>;
   isReducedMotion: boolean;
 }) {
-  // GPU wipe (see revealShift): outer frame slides in, inner content counter-slides.
-  const frameX = useTransform(progress, (p) => `${revealShift(p, index, isReducedMotion).toFixed(2)}%`);
-  const contentX = useTransform(progress, (p) => `${(-revealShift(p, index, isReducedMotion)).toFixed(2)}%`);
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    if (index === 0) return p >= 1 ? 0 : 1;
-    if (p <= index - 1) return 0;
-    if (p < index + 1) return 1;
-    return 0;
-  });
-
-  const zIndex = 30 + index;
+  const opacity = useTransform(progress, (p) => productPose(p, index, isReducedMotion).o);
+  const x = useTransform(progress, (p) => productPose(p, index, isReducedMotion).x);
+  const scale = useTransform(progress, (p) => productPose(p, index, isReducedMotion).s);
+  // Fully transparent layers drop out of compositing.
+  const visibility = useTransform(opacity, hiddenWhenClear);
   const hasTransparency = slide.isTransparent !== false;
 
   return (
-    <motion.div
+    <div
       role="group"
       aria-roledescription="slide"
       aria-label={`Slide ${index + 1} of ${totalSlides}: ${slide.productName}`}
-      className="absolute inset-0 h-full w-full overflow-hidden pointer-events-none will-change-[transform,opacity]"
-      style={{ zIndex, x: frameX, opacity }}
+      className="absolute inset-0 h-full w-full pointer-events-none"
+      style={{ zIndex: 30 + index }}
     >
-      <motion.div className="absolute inset-0 will-change-transform" style={{ x: contentX }}>
       <div className="pointer-events-none absolute inset-x-0 top-[var(--pc-m)] sm:top-[50%] md:top-[53%] lg:top-[54%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
-            !hasTransparency
-              ? "rounded-3xl border border-border/40 bg-card/30 p-4 backdrop-blur-md"
-              : ""
+            !hasTransparency ? "rounded-3xl border border-border/40 bg-card/30 p-4" : ""
           }`}
         >
-          <img
+          <motion.img
             src={slide.image}
             alt={slide.alt || slide.productName}
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
             decoding="async"
             draggable={false}
-            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none"
-            style={{ transform: "none" }}
+            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none will-change-[transform,opacity]"
+            style={{ x, scale, opacity, visibility }}
           />
         </div>
       </div>
-      </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -430,7 +361,7 @@ function ProductInfoCardItem({
       <motion.div
         data-slide-stack
         className="absolute z-[60] inset-x-4 bottom-[3.4rem] sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[300px] md:max-w-[330px] lg:max-w-[410px] xl:max-w-[440px] will-change-[transform,opacity]"
-        style={{ opacity, y, pointerEvents }}
+        style={{ opacity, y, pointerEvents, visibility: useTransform(opacity, hiddenWhenClear) }}
       >
         {/* Solid (non-blurred) card: a backdrop blur over moving layers is re-computed every scroll frame */}
         <div className="mx-auto max-w-md sm:max-w-none text-center sm:text-left rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-4 py-3.5 sm:p-4 md:p-5 lg:p-6 shadow-[0_18px_44px_-22px_rgba(90,30,50,0.45)]">
@@ -498,7 +429,7 @@ function ProductInfoCardItem({
       */}
       <motion.div
         className="hidden sm:flex flex-col items-end gap-3 absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
-        style={{ opacity, y, pointerEvents }}
+        style={{ opacity, y, pointerEvents, visibility: useTransform(opacity, hiddenWhenClear) }}
       >
         {/* Desktop Product Selector: Positioned JUST ABOVE the button */}
         {productSelector}
@@ -571,7 +502,7 @@ function FloatingAccentsItem({
         // Ambient spin/pulse only runs for the slide on screen; neighbours stay still.
         isActive ? "" : "[&_*]:[animation-play-state:paused]"
       }`}
-      style={{ x, opacity }}
+      style={{ x, opacity, visibility: useTransform(opacity, hiddenWhenClear) }}
     >
       {/* 1. Delicate 5-petal blossom top-left */}
       <div className="absolute left-[7%] sm:left-[11%] lg:left-[15%] top-[13%] sm:top-[15%] h-8 w-8 sm:h-11 sm:w-11 opacity-45 animate-[spin_45s_linear_infinite]">
@@ -653,15 +584,13 @@ export function ProductShowcaseSlider() {
     currentIndexRef.current = 0;
     progress.set(0);
 
-    // Scroll window smoothly to the top of the showcase track to reset to first color
+    // Jump to the top of the showcase track to reset to the first colour
     if (typeof window !== "undefined" && trackRef.current) {
       isProgrammaticUntilRef.current = Date.now() + 850;
       const rect = trackRef.current.getBoundingClientRect();
       const trackTop = window.scrollY + rect.top;
-      window.scrollTo({
-        top: trackTop,
-        behavior: "smooth",
-      });
+      // Instant (see goToSlide): a smooth scroll would outlive the lock and flash old slides.
+      window.scrollTo({ top: trackTop, behavior: "instant" });
     }
   };
 
@@ -753,7 +682,9 @@ export function ProductShowcaseSlider() {
         const scrollableDistance = trackRef.current.offsetHeight - window.innerHeight;
         if (scrollableDistance > 50) {
           const targetY = trackTop + (target / (totalSlides - 1)) * scrollableDistance;
-          window.scrollTo({ top: targetY, behavior: isTouchModeRef.current ? "instant" : "smooth" });
+          // Instant: the section is pinned, so the page does not visibly move. A smooth scroll
+          // would still be running when the lock below expires and drag the slide back.
+          window.scrollTo({ top: targetY, behavior: "instant" });
         }
       }
 
@@ -929,6 +860,7 @@ export function ProductShowcaseSlider() {
         return;
       }
       const t = e.touches[0];
+      if (!t) return;
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
       touchStartTimeRef.current = Date.now();
       isTouchNavigatingRef.current = false;
@@ -945,6 +877,7 @@ export function ProductShowcaseSlider() {
       if (!isPinned) return;
 
       const t = e.touches[0];
+      if (!t) return;
       const dx = t.clientX - touchStartPosRef.current.x;
       const dy = t.clientY - touchStartPosRef.current.y;
       const absDx = Math.abs(dx);

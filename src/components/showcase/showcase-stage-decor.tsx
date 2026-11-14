@@ -109,7 +109,16 @@ function useProductAnchor(
       raf = requestAnimationFrame(() => {
         if (!img) return;
         const s = section.getBoundingClientRect();
-        const r = img.getBoundingClientRect();
+        // Resting layout box (ignores the img's own enter/exit transform): the
+        // parent frame never moves, the offsets are untransformed.
+        const pr = (img.offsetParent ?? img.parentElement)?.getBoundingClientRect();
+        if (!pr) return;
+        const r = {
+          left: pr.left + img.offsetLeft,
+          top: pr.top + img.offsetTop,
+          width: img.offsetWidth,
+          height: img.offsetHeight,
+        };
         if (!r.width || !r.height) return;
         // object-contain: the drawn picture may be letterboxed inside the element box
         const ratio =

@@ -17,12 +17,8 @@ import { Phone, Menu, X, ArrowUpRight, Star, Instagram, Facebook, Youtube, Wind,
 import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
-import vest from "@/assets/c-vest.png";
-import trunk from "@/assets/c-trunk.png";
-import bra from "@/assets/c-bra.png";
-import brief from "@/assets/c-brief.png";
-import panty from "@/assets/c-panty.png";
-import tee from "@/assets/c-tee.png";
+import { productById } from "@/data/products";
+import { NewArrivals, type RailJump } from "@/components/new-arrivals/hanger-rail";
 import fabric from "@/assets/fabric.jpg";
 import silkRibbon from "@/assets/silk-ribbon.jpg";
 
@@ -68,13 +64,19 @@ const WHATSAPP_ENQUIRY_MESSAGE =
   "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
 const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
 type P = { name: string; short: string; img: string; tag: string; sw: string };
+const trunk = productById("trunk-maroon").image;
+const bra = productById("bra-caramel").image;
+const brief = productById("brief-navy").image;
+const panty = productById("panty-deep-teal").image;
+const vest = productById("vest-white").image;
+const tee = productById("tee-white").image;
 const products: P[] = [
-  { name: "Wine Trunk Boxer", short: "TRUNK", img: trunk, tag: "Men", sw: "var(--swatch-wine)" },
+  { name: "Maroon Boxer Trunk", short: "TRUNK", img: trunk, tag: "Men", sw: "var(--swatch-wine)" },
   { name: "Caramel Comfort Bra", short: "BRA", img: bra, tag: "Women", sw: "var(--swatch-sand)" },
   { name: "Navy Classic Brief", short: "BRIEF", img: brief, tag: "Men", sw: "var(--swatch-navy)" },
-  { name: "Teal High-Waist Panty", short: "PANTY", img: panty, tag: "Women", sw: "var(--swatch-teal)" },
-  { name: "Ribbed Cotton Vest", short: "VEST", img: vest, tag: "Men", sw: "var(--swatch-cloud)" },
-  { name: "Classic Crew Undershirt", short: "CREW", img: tee, tag: "Men", sw: "var(--swatch-slate)" },
+  { name: "Deep Teal Hipster", short: "PANTY", img: panty, tag: "Women", sw: "var(--swatch-teal)" },
+  { name: "Classic Cotton Vest", short: "VEST", img: vest, tag: "Men", sw: "var(--swatch-slate)" },
+  { name: "Crew Neck Undershirt", short: "CREW", img: tee, tag: "Men", sw: "var(--swatch-wine)" },
 ];
 const reviews = [
   { t: "Comfort You Can Feel", q: "Soft fabric that stays comfortable from morning meetings to late nights.", n: "Anjali R." },
@@ -149,6 +151,7 @@ function Header() {
       const threshold = 180;
       for (let i = links.length - 1; i >= 0; i--) {
         const link = links[i];
+        if (!link) continue;
         const el = document.getElementById(link.toLowerCase());
         if (el) {
           const rect = el.getBoundingClientRect();
@@ -420,7 +423,7 @@ function Hero() {
                   animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
                   exit={{ opacity: 0, scale: 0.75, rotate: 12, y: -30 }}
                   transition={{ duration: 0.8, ease }}
-                  className="drop-product pointer-events-none w-[195px] sm:w-[235px] md:w-[275px] lg:w-[325px] xl:w-[365px] 2xl:w-[395px] select-none will-change-transform drop-shadow-md"
+                  className="drop-product pointer-events-none aspect-square w-[195px] sm:w-[235px] md:w-[275px] lg:w-[325px] xl:w-[365px] 2xl:w-[395px] object-contain select-none will-change-transform drop-shadow-md"
                 />
               </AnimatePresence>
             </motion.div>
@@ -583,130 +586,10 @@ function Marquee() {
   );
 }
 
-function ProductCard({ p, i }: { p: P; i: number }) {
-  return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 20, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      transition={{ duration: 0.35, ease }}
-      whileHover="hover"
-      className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-5rem)/6)] lg:max-w-none"
-    >
-      <motion.div
-        variants={{ hover: { y: -6 } }}
-        transition={{ duration: 0.3, ease }}
-        className="relative overflow-hidden rounded-[1.75rem] border border-border"
-        style={{ backgroundColor: `color-mix(in oklab, ${p.sw} 22%, var(--card))` }}
-      >
-        <span
-          aria-hidden
-          className="absolute left-1/2 top-1/2 aspect-square w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 transition duration-700 group-hover:scale-110"
-          style={{ backgroundColor: p.sw }}
-        />
-        <span className="absolute left-3 top-3 z-10 rounded-full bg-background/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest backdrop-blur">
-          {p.tag}
-        </span>
-        <motion.img
-          variants={{ hover: { scale: 1.08, rotate: -4 } }}
-          transition={{ type: "spring", stiffness: 200, damping: 18 }}
-          src={p.img}
-          alt={p.name}
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          width={800}
-          height={1000}
-          className="drop-product relative mx-auto aspect-[4/5] w-[78%] object-contain py-6 pointer-events-none select-none"
-        />
-      </motion.div>
-      <div className="mt-4 px-1">
-        <h3 className="min-w-0 truncate text-sm font-semibold">{p.name}</h3>
-      </div>
-    </motion.article>
-  );
-}
-
-function Shop({
-  filter: controlledFilter,
-  onFilterChange,
-}: {
-  filter?: string;
-  onFilterChange?: (f: string) => void;
-} = {}) {
-  const [internalFilter, setInternalFilter] = useState("All");
-  const filter = controlledFilter !== undefined ? controlledFilter : internalFilter;
-  const setFilter = onFilterChange || setInternalFilter;
-  const list = products.filter((p) => filter === "All" || p.tag === filter);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isDown = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftPos = useRef(0);
-
-  useEffect(() => {
-    if (scrollRef.current && scrollRef.current.scrollLeft > 0) {
-      scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
-    }
-  }, [filter]);
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!scrollRef.current) return;
-    isDown.current = true;
-    startX.current = e.pageX - scrollRef.current.offsetLeft;
-    scrollLeftPos.current = scrollRef.current.scrollLeft;
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDown.current || !scrollRef.current) return;
-    const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
-  };
-
-  const onMouseUp = () => {
-    isDown.current = false;
-  };
-
-  return (
-    <section id="shop" className="mx-auto max-w-6xl px-5 py-12 sm:py-16 md:py-24 lg:py-28">
-      <div className="grid grid-cols-1 items-end gap-6 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div>
-          <Eyebrow>The collection</Eyebrow>
-          <SplitHeading className="mt-3 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl" lines={[{ text: "New" }, { text: "arrivals", className: "italic font-semibold text-primary" }]} />
-        </div>
-        <div className="flex max-w-full gap-2 overflow-x-auto no-scrollbar py-1 touch-auto" role="group" aria-label="Filter products">
-          {["All", "Men", "Women"].map((f) => (
-            <Magnet key={f} strength={0.3}>
-              <motion.button whileTap={{ scale: 0.94 }} aria-pressed={filter === f} onClick={() => setFilter(f)} className="relative min-h-11 cursor-pointer shrink-0 rounded-full border border-border px-6 text-sm font-semibold transition-colors duration-200 hover:border-primary">
-                {filter === f && <motion.span layoutId="filter-pill" transition={{ type: "spring", stiffness: 400, damping: 32 }} className="absolute inset-0 rounded-full bg-primary" />}
-                <span className={`relative ${filter === f ? "text-primary-foreground" : ""}`}>{f}</span>
-              </motion.button>
-            </Magnet>
-          ))}
-        </div>
-      </div>
-      <div
-        ref={scrollRef}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "auto" }}
-        className="no-scrollbar -mx-5 mt-6 sm:mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 lg:mx-0 lg:px-0 cursor-grab active:cursor-grabbing touch-auto select-none overscroll-x-contain"
-      >
-        <AnimatePresence mode="sync">
-          {list.map((p, k) => <ProductCard key={p.name} p={p} i={k} />)}
-        </AnimatePresence>
-      </div>
-    </section>
-  );
-}
-
 type Col = { t: string; s: string; n: string; items: string; tint: string; pics: { src: string; alt: string }[] };
 
 /** Fanned stack of cut-out products; spreads on hover and follows the pointer in layers. */
-function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: (category: string) => void }) {
+function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: ((category: string) => void) | undefined }) {
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const px = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 18 });
@@ -798,7 +681,7 @@ function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: (cat
               }}
               transition={{ type: "spring", stiffness: 140, damping: 16, delay: 0.25 + k * 0.1 }}
               style={{ zIndex: 10 - Math.abs(Math.round(o * 2)) }}
-              className="drop-product absolute left-1/2 top-1/2 w-[60%] sm:w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              className="drop-product absolute left-1/2 top-1/2 aspect-square w-[60%] sm:w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
             />
           );
         })}
@@ -809,8 +692,8 @@ function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: (cat
 
 function Collections({ onSelectCollection }: { onSelectCollection?: (category: string) => void } = {}) {
   const cols: Col[] = [
-    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Wine trunk boxer" }, { src: vest, alt: "Ribbed cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
-    { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Teal high-waist panty" }] },
+    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Maroon trunk" }, { src: vest, alt: "Classic cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
+    { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Deep teal hipster" }] },
   ];
   return (
     <section id="collections" className="mx-auto max-w-6xl px-5 pb-12 sm:pb-16 md:pb-24">
@@ -868,7 +751,7 @@ function Feature() {
             <motion.div aria-hidden animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/50" />
             <motion.div aria-hidden animate={{ rotate: -360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }} className="absolute inset-8 rounded-full border border-secondary-foreground/20" />
             <div aria-hidden className="absolute inset-14 rounded-full bg-primary/50 blur-2xl" />
-            <motion.img style={{ rotate, y }} src={trunk} alt="Wine trunk boxer" loading="lazy" className="drop-product absolute inset-0 m-auto w-[68%]" />
+            <motion.img style={{ rotate, y }} src={trunk} alt="Maroon trunk" loading="lazy" className="drop-product absolute inset-0 m-auto w-[68%]" />
             {[
               { l: "Micro-modal", c: "left-0 top-[14%]", d: 0 },
               { l: "Anti-roll band", c: "bottom-[12%] right-0", d: 1.2 },
@@ -967,7 +850,7 @@ if (typeof window !== "undefined") {
 }
 
 function Index() {
-  const [shopFilter, setShopFilter] = useState("All");
+  const [railJump, setRailJump] = useState<RailJump>();
 
   // Always come to top on refresh or load
   useEffect(() => {
@@ -1009,8 +892,8 @@ function Index() {
         <ProductShowcaseSlider />
         <TrioBoxShowcase />
         <Marquee />
-        <Shop filter={shopFilter} onFilterChange={setShopFilter} />
-        <Collections onSelectCollection={(cat) => setShopFilter(cat)} />
+        <NewArrivals jump={railJump} />
+        <Collections onSelectCollection={(cat) => setRailJump({ category: cat === "Men" ? "brief" : "bra", nonce: Date.now() })} />
         <Feature />
         <Reviews />
       </main>
