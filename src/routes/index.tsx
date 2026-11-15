@@ -13,7 +13,7 @@ import {
   useVelocity,
   type Variants,
 } from "framer-motion";
-import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck } from "lucide-react";
+import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck, ChevronDown } from "lucide-react";
 import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
@@ -403,72 +403,166 @@ function Reviews() {
   );
 }
 
+/** WhatsApp glyph (lucide has no brand icons): chat bubble with a handset. */
+function WhatsAppIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3.5 20.5 4.8 16.7A8.5 8.5 0 1 1 8 19.6Z" />
+      <path d="M9.1 8.6c.2-.5.6-.6.9-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.3 0 .5-.1.7l-.5.6c-.1.2-.1.4 0 .6.5.9 1.3 1.7 2.3 2.2.2.1.4.1.6-.1l.6-.6c.2-.2.4-.2.7-.1l1.5.7c.3.1.4.3.4.6v.4c0 .4-.2.8-.6 1-.5.3-1.2.5-1.9.3-2.6-.7-4.6-2.6-5.5-5.1-.2-.7 0-1.4.4-2.2Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Accepted payment methods as small inline marks (no image requests). */
+function PaymentMark({ id }: { id: "upi" | "visa" | "mastercard" | "rupay" | "cod" }) {
+  const label = { upi: "UPI", visa: "Visa", mastercard: "Mastercard", rupay: "RuPay", cod: "Cash on delivery" }[id];
+  return (
+    <li
+      aria-label={label}
+      title={label}
+      className="flex h-11 min-w-0 items-center justify-center rounded-xl border border-border bg-background/70 px-1 shadow-[0_6px_14px_-10px_rgba(90,30,50,0.35)]"
+    >
+      {id === "upi" && (
+        <span aria-hidden className="flex items-center gap-0.5 text-[15px] font-black italic tracking-tight text-[#4b4b4f]">
+          UPI
+          <svg viewBox="0 0 12 14" className="h-3.5 w-3">
+            <path d="M1 1 7 7 1 13Z" fill="#f47c20" />
+            <path d="M5 1 11 7 5 13Z" fill="#138a36" />
+          </svg>
+        </span>
+      )}
+      {id === "visa" && (
+        <span aria-hidden className="text-[17px] font-black italic tracking-tight text-[#1a1f71]">
+          VISA
+        </span>
+      )}
+      {id === "mastercard" && (
+        <svg aria-hidden viewBox="0 0 38 24" className="h-6 w-9">
+          <circle cx="13" cy="12" r="10" fill="#eb001b" />
+          <circle cx="25" cy="12" r="10" fill="#f79e1b" />
+          <path d="M19 4a10 10 0 0 1 0 16a10 10 0 0 1 0-16Z" fill="#ff5f00" />
+        </svg>
+      )}
+      {id === "rupay" && (
+        <span aria-hidden className="text-[14px] font-black italic tracking-tight">
+          <span className="text-[#1b3f8f]">Ru</span>
+          <span className="text-[#1b3f8f]">Pay</span>
+          <span className="ml-px align-super text-[8px] text-[#e86c1f]">●</span>
+        </span>
+      )}
+      {id === "cod" && (
+        <span aria-hidden className="text-[15px] font-black italic tracking-tight text-foreground">
+          COD
+        </span>
+      )}
+    </li>
+  );
+}
+
+const POLICIES: { title: string; body: string }[] = [
+  { title: "Terms & Conditions", body: "the terms of using this site and ordering from RIDOZ" },
+  { title: "Privacy Policy", body: "how we collect, use and protect your details" },
+  { title: "Returns & Exchanges", body: "returns, exchanges and size swaps" },
+  { title: "Shipping & Delivery", body: "delivery areas, timelines and order tracking" },
+];
+
 function Footer() {
+  const social = [
+    { I: Instagram, l: "RIDOZ on Instagram", href: INSTAGRAM_URL },
+    { I: Mail, l: `Email ${EMAIL} in Gmail`, href: GMAIL_WEB, onClick: openGmail },
+    { I: WhatsAppIcon, l: "Chat with RIDOZ on WhatsApp", href: WHATSAPP_ENQUIRY_URL },
+    { I: MapPin, l: "RIDOZ location on Google Maps", href: MAPS_URL },
+  ];
   return (
     <footer id="contact" className="relative overflow-hidden border-t border-border">
       <motion.p aria-hidden initial={{ y: "35%", opacity: 0 }} whileInView={{ y: "10%", opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1.2, ease }} className="pointer-events-none absolute inset-x-0 bottom-0 select-none whitespace-nowrap text-center font-display text-[26vw] font-bold leading-[0.75] tracking-tight text-muted">RIDOZ</motion.p>
-      <div className="relative z-10 mx-auto grid max-w-6xl gap-8 sm:gap-10 px-5 py-8 sm:py-12 md:py-14 md:grid-cols-3">
-        <div className="text-sm">
+
+      <div className="ft-grid relative z-10 mx-auto max-w-6xl px-5 pb-6 pt-10 sm:pt-12 md:pt-14">
+        {/* Brand */}
+        <div className="ft-brand">
           <BrandLogo variant="full" size="md" showWordmark={true} href="#drop" />
-          <p className="mt-3 text-muted-foreground">
+          <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-foreground/80">
             Precision-engineered everyday luxury. Crafted with breathable micro-modal and combed cotton.
           </p>
-          <div className="mt-4">
-            <p className="font-semibold uppercase tracking-widest text-primary text-xs">Customer Concierge</p>
-            <a href={TEL} className="mt-1 inline-flex min-h-11 items-center gap-2 font-semibold hover:text-primary transition-colors">
-              <Phone className="h-4 w-4" />{PHONE}
-            </a>
-            <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-2 break-all font-semibold hover:text-primary transition-colors">
-              <Mail className="h-4 w-4 shrink-0" />{EMAIL}
-            </a>
-          </div>
-          <div className="mt-4 flex gap-2">
-            {[
-              { I: Instagram, l: "RIDOZ on Instagram", href: INSTAGRAM_URL },
-              { I: Mail, l: `Email ${EMAIL} in Gmail`, href: GMAIL_WEB, onClick: openGmail },
-              { I: MapPin, l: "RIDOZ location on Google Maps", href: MAPS_URL },
-            ].map(({ I, l, href, onClick }) => (
-              <Magnet key={l} strength={0.4}>
-                <a
-                  href={href}
-                  onClick={onClick}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={l}
-                  title={l}
-                  className="btn-sweep flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/60 transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground"
-                >
-                  <I className="h-4 w-4" />
-                </a>
-              </Magnet>
-            ))}
-          </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-2 text-sm text-muted-foreground">
-          {["Terms & Conditions", "Privacy Policy", "Returns & Exchanges", "Shipping & Delivery"].map((l) => (
-            <a
-              key={l}
-              href="#contact"
-              onClick={(e) => e.preventDefault()}
-              className="flex min-h-11 items-center transition-colors duration-200 hover:text-foreground"
-            >
-              {l}
-            </a>
+
+        {/* Social */}
+        <div className="ft-social flex flex-wrap gap-3 xl:gap-2.5">
+          {social.map(({ I, l, href, onClick }) => (
+            <Magnet key={l} strength={0.4}>
+              <a
+                href={href}
+                onClick={onClick}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={l}
+                title={l}
+                className="btn-sweep flex h-12 w-12 xl:h-11 xl:w-11 items-center justify-center rounded-full border border-primary/10 bg-primary/[0.07] text-foreground transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground"
+              >
+                <I className="h-5 w-5" />
+              </a>
+            </Magnet>
           ))}
         </div>
-        <div>
-          <p className="font-semibold uppercase tracking-widest text-primary text-xs">Payment & Trust</p>
-          <p className="mt-2 text-xs text-muted-foreground">100% Encrypted & Secure Checkout</p>
-          <div className="mt-3 flex flex-wrap content-start gap-2">
-            {["UPI", "VISA", "Mastercard", "RuPay", "COD"].map((p) => (
-              <span key={p} className="rounded-md border border-border bg-background/50 px-2.5 py-1 text-xs font-semibold">
-                {p}
-              </span>
+
+        {/* Customer care */}
+        <div className="ft-care">
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">Customer Concierge</p>
+          <ul className="mt-4 space-y-2">
+            <li>
+              <a href={TEL} className="group flex min-h-11 items-center gap-3 font-semibold transition-colors hover:text-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-foreground transition-colors group-hover:text-primary">
+                  <Phone className="h-[18px] w-[18px]" />
+                </span>
+                <span className="text-[15px]">{PHONE}</span>
+              </a>
+            </li>
+            <li>
+              <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="group flex min-h-11 items-center gap-3 font-semibold transition-colors hover:text-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-foreground transition-colors group-hover:text-primary">
+                  <Mail className="h-[18px] w-[18px]" />
+                </span>
+                <span className="min-w-0 text-[14px] xl:text-[13px]">
+                  {EMAIL.split("@")[0]}
+                  <wbr />@{EMAIL.split("@")[1]}
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {/* Policies: native accordions (no JS) */}
+        <div className="ft-legal border-t border-border md:border-t-0 xl:-mt-3">
+          {POLICIES.map((p) => (
+            <details key={p.title} className="group border-b border-border">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 text-[15px] font-medium transition-colors hover:text-primary">
+                {p.title}
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-300 group-open:rotate-180" />
+              </summary>
+              <p className="pb-4 text-sm leading-relaxed text-muted-foreground">
+                For {p.body}, please reach our Customer Concierge at{" "}
+                <a href={TEL} className="font-medium text-foreground underline-offset-2 hover:underline">{PHONE}</a> or{" "}
+                <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-foreground underline-offset-2 hover:underline">{EMAIL}</a>.
+              </p>
+            </details>
+          ))}
+        </div>
+
+        {/* Payment & trust */}
+        <div className="ft-pay">
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">Payment & Trust</p>
+          <p className="mt-2 text-sm text-muted-foreground">100% Encrypted & Secure Checkout</p>
+          <ul aria-label="Accepted payment methods" className="mt-4 grid max-w-[24rem] grid-cols-5 gap-2">
+            {(["upi", "visa", "mastercard", "rupay", "cod"] as const).map((id) => (
+              <PaymentMark key={id} id={id} />
             ))}
-          </div>
+          </ul>
         </div>
       </div>
-      <p className="relative z-10 py-5 text-center text-xs text-muted-foreground">© 2026 RIDOZ Style Innerwears. All rights reserved.</p>
+
+      <div className="relative z-10 mx-auto max-w-6xl px-5">
+        <p className="border-t border-border py-5 text-center text-xs text-muted-foreground sm:text-sm">© 2026 RIDOZ Style Innerwears. All rights reserved.</p>
+      </div>
     </footer>
   );
 }

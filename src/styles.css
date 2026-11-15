@@ -224,3 +224,20 @@ html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
       linear-gradient(165deg, #fcf3f0 0%, #f7e8e3 50%, #f2dbd5 100%);
   }
 }
+
+/* Footer layout: stacked on phones, 2 columns on tablets/small laptops, 4 divided columns from 1280px */
+.ft-grid { display: grid; row-gap: 2rem; grid-template-columns: minmax(0, 1fr); grid-template-areas: "brand" "care" "social" "legal" "pay"; }
+.ft-brand { grid-area: brand; } .ft-care { grid-area: care; } .ft-social { grid-area: social; }
+.ft-legal { grid-area: legal; } .ft-pay { grid-area: pay; }
+@media (min-width: 768px) {
+  .ft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2.5rem; row-gap: 1.75rem;
+    grid-template-areas: "brand care" "social care" "legal pay"; }
+}
+@media (min-width: 1280px) {
+  .ft-grid { grid-template-columns: 0.95fr 1.05fr 1.05fr 1.2fr; column-gap: 0; row-gap: 1.5rem;
+    grid-template-areas: "brand care legal pay" "social care legal pay"; }
+  .ft-brand, .ft-social { padding-right: 2rem; }
+  .ft-care, .ft-legal, .ft-pay { border-left: 1px solid var(--border); padding-left: 2rem; padding-right: 1.5rem; }
+  .ft-pay { padding-right: 0; }
+}
+.ft-legal summary::-webkit-details-marker { display: none; }
