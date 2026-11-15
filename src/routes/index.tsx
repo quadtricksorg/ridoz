@@ -72,7 +72,8 @@ function openGmail(e: React.MouseEvent<HTMLAnchorElement>) {
   const ua = navigator.userAgent;
   if (/Android/i.test(ua)) {
     e.preventDefault();
-    window.location.href = `intent://${EMAIL}#Intent;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(GMAIL_WEB)};end`;
+    // "intent:" (no //) → Android builds a clean "mailto:address"; "intent://" would give "mailto://address".
+    window.location.href = `intent:${EMAIL}#Intent;action=android.intent.action.SENDTO;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(GMAIL_WEB)};end`;
   } else if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
     e.preventDefault();
     // Gmail app not installed → the page stays visible, so fall back to web Gmail.
