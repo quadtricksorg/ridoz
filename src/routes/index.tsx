@@ -482,15 +482,11 @@ if (typeof window !== "undefined") {
 function Index() {
 
   // Always come to top on refresh or load
+  // Always start at the top on load / refresh (scroll restoration is "manual" above).
+  // No "beforeunload" reset: phones fire it for tel:, mailto: and app links too, which
+  // threw the visitor back to the top while the page stayed open.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-    }
-    const onBeforeUnload = () => {
-      window.scrollTo(0, 0);
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    window.scrollTo(0, 0);
   }, []);
 
   const [loading, setLoading] = useState(() => {
