@@ -13,7 +13,7 @@ import {
   useVelocity,
   type Variants,
 } from "framer-motion";
-import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck, ChevronDown } from "lucide-react";
+import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck } from "lucide-react";
 import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
@@ -414,13 +414,13 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
 }
 
 /** Accepted payment methods as small inline marks (no image requests). */
-function PaymentMark({ id }: { id: "upi" | "visa" | "mastercard" | "rupay" | "cod" }) {
-  const label = { upi: "UPI", visa: "Visa", mastercard: "Mastercard", rupay: "RuPay", cod: "Cash on delivery" }[id];
+function PaymentMark({ id }: { id: "upi" | "cod" }) {
+  const label = { upi: "UPI", cod: "Cash on delivery" }[id];
   return (
     <li
       aria-label={label}
       title={label}
-      className="flex h-11 min-w-0 items-center justify-center rounded-xl border border-border bg-background/70 px-1 shadow-[0_6px_14px_-10px_rgba(90,30,50,0.35)]"
+      className="flex h-11 min-w-[5.5rem] items-center justify-center rounded-xl border border-border bg-background/70 px-4 shadow-[0_6px_14px_-10px_rgba(90,30,50,0.35)]"
     >
       {id === "upi" && (
         <span aria-hidden className="flex items-center gap-0.5 text-[15px] font-black italic tracking-tight text-[#4b4b4f]">
@@ -431,25 +431,6 @@ function PaymentMark({ id }: { id: "upi" | "visa" | "mastercard" | "rupay" | "co
           </svg>
         </span>
       )}
-      {id === "visa" && (
-        <span aria-hidden className="text-[17px] font-black italic tracking-tight text-[#1a1f71]">
-          VISA
-        </span>
-      )}
-      {id === "mastercard" && (
-        <svg aria-hidden viewBox="0 0 38 24" className="h-6 w-9">
-          <circle cx="13" cy="12" r="10" fill="#eb001b" />
-          <circle cx="25" cy="12" r="10" fill="#f79e1b" />
-          <path d="M19 4a10 10 0 0 1 0 16a10 10 0 0 1 0-16Z" fill="#ff5f00" />
-        </svg>
-      )}
-      {id === "rupay" && (
-        <span aria-hidden className="text-[14px] font-black italic tracking-tight">
-          <span className="text-[#1b3f8f]">Ru</span>
-          <span className="text-[#1b3f8f]">Pay</span>
-          <span className="ml-px align-super text-[8px] text-[#e86c1f]">●</span>
-        </span>
-      )}
       {id === "cod" && (
         <span aria-hidden className="text-[15px] font-black italic tracking-tight text-foreground">
           COD
@@ -458,13 +439,6 @@ function PaymentMark({ id }: { id: "upi" | "visa" | "mastercard" | "rupay" | "co
     </li>
   );
 }
-
-const POLICIES: { title: string; body: string }[] = [
-  { title: "Terms & Conditions", body: "the terms of using this site and ordering from RIDOZ" },
-  { title: "Privacy Policy", body: "how we collect, use and protect your details" },
-  { title: "Returns & Exchanges", body: "returns, exchanges and size swaps" },
-  { title: "Shipping & Delivery", body: "delivery areas, timelines and order tracking" },
-];
 
 function Footer() {
   const social = [
@@ -531,29 +505,12 @@ function Footer() {
           </ul>
         </div>
 
-        {/* Policies: native accordions (no JS) */}
-        <div className="ft-legal border-t border-border md:border-t-0 xl:-mt-3">
-          {POLICIES.map((p) => (
-            <details key={p.title} className="group border-b border-border">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 text-[15px] font-medium transition-colors hover:text-primary">
-                {p.title}
-                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-300 group-open:rotate-180" />
-              </summary>
-              <p className="pb-4 text-sm leading-relaxed text-muted-foreground">
-                For {p.body}, please reach our Customer Concierge at{" "}
-                <a href={TEL} className="font-medium text-foreground underline-offset-2 hover:underline">{PHONE}</a> or{" "}
-                <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-foreground underline-offset-2 hover:underline">{EMAIL}</a>.
-              </p>
-            </details>
-          ))}
-        </div>
-
         {/* Payment & trust */}
         <div className="ft-pay">
           <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">Payment & Trust</p>
           <p className="mt-2 text-sm text-muted-foreground">100% Encrypted & Secure Checkout</p>
-          <ul aria-label="Accepted payment methods" className="mt-4 grid max-w-[24rem] grid-cols-5 gap-2">
-            {(["upi", "visa", "mastercard", "rupay", "cod"] as const).map((id) => (
+          <ul aria-label="Accepted payment methods" className="mt-4 flex flex-wrap gap-2.5">
+            {(["upi", "cod"] as const).map((id) => (
               <PaymentMark key={id} id={id} />
             ))}
           </ul>

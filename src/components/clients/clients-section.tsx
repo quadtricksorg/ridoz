@@ -2,8 +2,6 @@ import { motion } from "framer-motion";
 import {
   Anchor,
   ArrowUpRight,
-  GraduationCap,
-  Handshake,
   MapPin,
   ShieldCheck,
   Shirt,
@@ -25,7 +23,6 @@ const ease = [0.22, 1, 0.36, 1] as const;
 
 const NAVY_FACTS = [
   { icon: MapPin, label: "Headquarters", value: "Kochi, Kerala" },
-  { icon: GraduationCap, label: "Role", value: "The Navy's training command" },
   { icon: Shirt, label: "We supply", value: "Everyday innerwear for personnel" },
 ];
 
@@ -50,11 +47,6 @@ const RETAIL = [
     icon: Shirt,
     title: "Men's & women's wear",
     text: "Boutiques pairing RIDOZ innerwear with everyday fashion.",
-  },
-  {
-    icon: Handshake,
-    title: "Uniform & essentials",
-    text: "Suppliers serving institutions with dependable basics.",
   },
 ];
 
@@ -148,7 +140,7 @@ export function ClientsSection({ partnerHref }: { partnerHref: string }) {
             stay-put and comfortable from first drill to last watch.
           </p>
 
-          <dl className="mt-6 grid gap-3 sm:grid-cols-3">
+          <dl className="mt-6 grid gap-3 sm:grid-cols-2">
             {NAVY_FACTS.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
@@ -201,7 +193,7 @@ export function ClientsSection({ partnerHref }: { partnerHref: string }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.6, delay: 0.2 + i * 0.08, ease }}
-                className="rounded-2xl border border-border bg-background/70 p-4"
+                className={`rounded-2xl border border-border bg-background/70 p-4 ${i === RETAIL.length - 1 ? "sm:col-span-2" : ""}`}
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
