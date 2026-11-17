@@ -202,6 +202,7 @@ type ItemProps = {
   idle: boolean; // gentle idle sway on the front garment
   preview: boolean; // hovered: turned to the front in place, full colour, swaying
   focus: number; // scale of the selected garment
+  warm: boolean; // section is close to the viewport → load the nearby garments eagerly
   onPick: (i: number) => void;
 };
 
@@ -219,6 +220,7 @@ const HangerItem = memo(function HangerItem({
   idle,
   preview,
   focus,
+  warm,
   onPick,
 }: ItemProps) {
   const isActive = d === 0;
@@ -302,12 +304,14 @@ const HangerItem = memo(function HangerItem({
           >
             <img
               src={product.image}
+              srcSet={product.srcSet}
+              sizes={`${Math.ceil(w * focus)}px`}
               alt=""
               width={product.w}
               height={product.h}
               draggable={false}
               decoding="async"
-              loading={near ? "eager" : "lazy"}
+              loading={near && warm ? "eager" : "lazy"}
               className="pointer-events-none absolute left-0 max-w-none select-none"
               style={{ top: garmentTop, width: w, height: h }}
             />
@@ -376,7 +380,7 @@ const CategoryChip = memo(function CategoryChip({
         }}
       >
         <img
-          src={product.image}
+          src={product.thumb}
           alt=""
           width={product.w}
           height={product.h}
@@ -400,6 +404,9 @@ export function NewArrivals() {
   const chipsRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const inView = useInView(sectionRef, { amount: 0.35 });
+  // Nearby garments switch to eager loading only once the rail is about a screen away,
+  // so they don't compete with the first screen for bandwidth.
+  const warm = useInView(sectionRef, { once: true, margin: "100% 0px" });
 
   const [geo, setGeo] = useState<Geo | null>(null);
   const [active, setActive] = useState(0);
@@ -774,6 +781,7 @@ export function NewArrivals() {
               idle={inView && !reduce}
               preview={i === preview}
               focus={geo.focus}
+              warm={warm}
               onPick={pick}
             />
           ))}

@@ -1,6 +1,6 @@
 import React from "react";
-import ridozLogoWebp from "@/assets/ridoz-logo.webp";
-import ridozLogoPng from "@/assets/ridoz-logo.png";
+// 160px copy of the 1024px master (drawn at 32–64 CSS px); see scratch/generate-responsive-variants.mjs.
+import ridozLogoPng from "@/assets/ridoz-logo-160.png";
 import { cn } from "@/lib/utils";
 
 export interface BrandLogoProps {
@@ -100,19 +100,15 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         </svg>
       ) : (
         // Full official brand logo (Burgundy ring + "Style" script)
-        <picture className="contents">
-          <source srcSet={ridozLogoWebp} type="image/webp" />
-          <img
-            src={ridozLogoPng}
-            alt="RIDOZ Style"
-            width={currentSize.width}
-            height={currentSize.height}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
-            decoding="async"
-            className="h-full w-auto object-contain select-none"
-          />
-        </picture>
+        <img
+          src={ridozLogoPng}
+          alt="RIDOZ Style"
+          width={currentSize.width}
+          height={currentSize.height}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          className="h-full w-auto object-contain select-none"
+        />
       )}
     </div>
   );

@@ -46,10 +46,37 @@ export type Product = {
   /** Representative fabric colour (swatches, glows). */
   hex: string;
   image: string;
+  /** `image` at 480w and 800w — pair with a `sizes` that matches the drawn width. */
+  srcSet: string;
+  /** 128px-wide copy for colour swatches (drawn ≤ 44 CSS px). */
+  thumb: string;
   /** Natural size of the WebP — lets the browser reserve space. */
   w: number;
   h: number;
 };
+
+/* Smaller copies made by scratch/generate-responsive-variants.mjs, keyed by file name. */
+const byName = (files: Record<string, string>) =>
+  Object.fromEntries(Object.entries(files).map(([f, url]) => [f.split("/").pop()!, url]));
+const IMG_480 = byName(
+  import.meta.glob<string>("@/assets/products/480/*.webp", {
+    eager: true,
+    query: "?no-inline",
+    import: "default",
+  }),
+);
+const IMG_THUMB = byName(
+  import.meta.glob<string>("@/assets/products/thumb/*.webp", {
+    eager: true,
+    query: "?no-inline",
+    import: "default",
+  }),
+);
+
+/** Responsive variants for any product image URL (falls back to the original). */
+const VARIANTS = new Map<string, { srcSet: string; thumb: string }>();
+export const productImageVariants = (image: string) =>
+  VARIANTS.get(image) ?? { srcSet: `${image} 800w`, thumb: image };
 
 export const CATEGORIES: { id: ProductCategory; label: string; gender: Gender }[] = [
   { id: "bra", label: "Bras", gender: "Women" },
@@ -68,17 +95,26 @@ const p = (
   image: string,
   w: number,
   h: number,
-): Product => ({
-  id,
-  category,
-  name,
-  colour,
-  hex,
-  image,
-  w,
-  h,
-  gender: CATEGORIES.find((c) => c.id === category)!.gender,
-});
+): Product => {
+  const file = `${id}.webp`;
+  const variants = {
+    srcSet: IMG_480[file] ? `${IMG_480[file]} 480w, ${image} ${w}w` : `${image} ${w}w`,
+    thumb: IMG_THUMB[file] ?? image,
+  };
+  VARIANTS.set(image, variants);
+  return {
+    id,
+    category,
+    name,
+    colour,
+    hex,
+    image,
+    ...variants,
+    w,
+    h,
+    gender: CATEGORIES.find((c) => c.id === category)!.gender,
+  };
+};
 
 /** Ordered by category so the hanger rail reads as grouped sections. */
 export const PRODUCTS: Product[] = [
