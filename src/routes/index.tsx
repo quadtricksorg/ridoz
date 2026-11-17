@@ -22,7 +22,8 @@ import { NewArrivals } from "@/components/new-arrivals/hanger-rail";
 import { EveryBodyHero } from "@/components/hero/every-body-hero";
 import { ClientsSection } from "@/components/clients/clients-section";
 import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
-import fabric from "@/assets/fabric.jpg";
+import fabric768 from "@/assets/fabric-768.webp";
+import fabric1408 from "@/assets/fabric-1408.webp";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -89,7 +90,7 @@ const WHATSAPP_NUMBER = PHONE.replace(/\D/g, "");
 const WHATSAPP_ENQUIRY_MESSAGE =
   "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
 const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
-const trunk = productById("trunk-maroon").image;
+const trunk = productById("trunk-maroon");
 const reviews = [
   { t: "Comfort You Can Feel", q: "Soft fabric that stays comfortable from morning meetings to late nights.", n: "Anjali R." },
   { t: "Quality That Matters", q: "Stitching holds up wash after wash. The waistband never rolls.", n: "Rahul M." },
@@ -348,7 +349,7 @@ function Feature() {
   return (
     <section ref={ref} className="mx-auto max-w-6xl px-5 pb-12 sm:pb-16 md:pb-24">
       <motion.div initial={{ opacity: 0, scale: 0.96 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.9, ease }} className="relative overflow-hidden rounded-[2.5rem] bg-secondary text-secondary-foreground">
-        <img src={fabric} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-overlay" />
+        <img src={fabric1408} srcSet={`${fabric768} 768w, ${fabric1408} 1408w`} sizes="(min-width: 1152px) 1112px, calc(100vw - 40px)" width={1408} height={912} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-overlay" />
         <div className="relative grid items-center gap-6 sm:gap-8 p-6 sm:p-12 lg:grid-cols-[1.15fr_0.85fr]">
           <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-60px" }}>
             <motion.p variants={rise} className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Boxer Briefs</motion.p>
@@ -375,7 +376,7 @@ function Feature() {
             <motion.div aria-hidden animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/50" />
             <motion.div aria-hidden animate={{ rotate: -360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }} className="absolute inset-8 rounded-full border border-secondary-foreground/20" />
             <div aria-hidden className="absolute inset-14 rounded-full bg-primary/50 blur-2xl" />
-            <motion.img style={{ rotate, y }} src={trunk} alt="Maroon trunk" loading="lazy" className="drop-product absolute inset-0 m-auto w-[68%]" />
+            <motion.img style={{ rotate, y }} src={trunk.image} srcSet={trunk.srcSet} sizes="245px" width={trunk.w} height={trunk.h} alt="Maroon trunk" loading="lazy" decoding="async" className="drop-product absolute inset-0 m-auto w-[68%]" />
             {[
               { l: "Micro-modal", c: "left-0 top-[14%]", d: 0 },
               { l: "Anti-roll band", c: "bottom-[12%] right-0", d: 1.2 },
@@ -454,7 +455,7 @@ function Footer() {
       <div className="ft-grid relative z-10 mx-auto max-w-6xl px-5 pb-6 pt-10 sm:pt-12 md:pt-14">
         {/* Brand */}
         <div className="ft-brand">
-          <BrandLogo variant="full" size="md" showWordmark={true} href="#drop" />
+          <BrandLogo variant="full" size="md" showWordmark={true} href="#drop" priority={false} />
           <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-foreground/80">
             Precision-engineered everyday luxury. Crafted with breathable micro-modal and combed cotton.
           </p>

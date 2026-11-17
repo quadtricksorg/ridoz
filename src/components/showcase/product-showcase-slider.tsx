@@ -24,6 +24,7 @@ import {
 } from "@/data/showcase-slides";
 import { FEATURES_BY_PRODUCT, FeatureRow, ShowcaseStage } from "@/components/showcase/showcase-stage-decor";
 import { LOOK_TO_RAIL, goToRail } from "@/lib/shop-links";
+import { productImageVariants } from "@/data/products";
 
 /** Autoplay: how long each colourway stays, and how long after the last user input it resumes. */
 const AUTOPLAY_MS = 3200;
@@ -222,9 +223,10 @@ function SlideStationaryBraLayer({
         >
           <motion.img
             src={slide.image}
+            srcSet={productImageVariants(slide.image).srcSet}
+            sizes="(min-width: 1280px) 500px, (min-width: 768px) 440px, (min-width: 640px) 50vw, 72vw"
             alt={slide.alt || slide.productName}
             loading={index === 0 ? "eager" : "lazy"}
-            fetchPriority={index === 0 ? "high" : "auto"}
             decoding="async"
             draggable={false}
             className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[max(300px,min(440px,calc(100vw-760px)))] xl:max-w-[min(500px,calc(100vw-860px))] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[46vh] object-contain select-none will-change-[transform,opacity]"
@@ -297,8 +299,9 @@ function ProductSelector({
             }`}
           >
             <img
-              src={activeThumb}
+              src={productImageVariants(activeThumb).thumb}
               alt=""
+              decoding="async"
               draggable={false}
               className="h-full w-full object-contain pointer-events-none select-none transition-transform duration-300"
             />
@@ -1115,9 +1118,6 @@ export function ProductShowcaseSlider() {
       >
         {/* Same grain texture as Hero and other sections */}
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
-
-        {/* Preload first slide image */}
-        <link rel="preload" as="image" href={activeSlides[0]?.image} />
 
         {/* 0. STAGE: colour halo, glow arc and podium behind the title and product */}
         <ShowcaseStage slides={activeSlides} currentIndex={currentIndex} />
