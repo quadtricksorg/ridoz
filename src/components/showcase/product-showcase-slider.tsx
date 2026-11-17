@@ -22,6 +22,15 @@ import {
   type ShowcaseSlide,
   type ShowcaseProductType,
 } from "@/data/showcase-slides";
+import { FEATURES_BY_PRODUCT, FeatureRow, ShowcaseStage } from "@/components/showcase/showcase-stage-decor";
+import { LOOK_TO_RAIL, goToRail } from "@/lib/shop-links";
+
+/** Autoplay: how long each colourway stays, and how long after the last user input it resumes. */
+const AUTOPLAY_MS = 3200;
+const AUTOPLAY_IDLE_MS = 4000;
+
+/** Fully transparent layers are hidden so they drop out of compositing while scrolling. */
+const hiddenWhenClear = (o: number) => (o <= 0.001 ? "hidden" : "visible");
 
 // Lightweight, delicate botanical small flower designs for the moving accent layer
 function DelicateBlossomFlower({ className, color }: { className?: string; color: string }) {
@@ -89,70 +98,6 @@ function MiniDaisyFlower({ className, color }: { className?: string; color: stri
 }
 
 /**
- * SlideBackgroundLayer Component:
- * Renders the dark plain background derived directly from the bra color.
- * Deep, rich, luxurious mood with subtle organic grain and soft ambient glow.
- * Masked smoothly via pure GPU clipPath.
- */
-function SlideBackgroundLayer({
-  slide,
-  index,
-  totalSlides,
-  progress,
-  isReducedMotion,
-}: {
-  slide: ShowcaseSlide;
-  index: number;
-  totalSlides: number;
-  progress: MotionValue<number>;
-  isReducedMotion: boolean;
-}) {
-  const clipPath = useTransform(progress, (p) => {
-    if (isReducedMotion || index === 0) return "none";
-    if (p <= index - 1) return "inset(0% 0% 0% 100%)";
-    if (p < index) {
-      const leftInset = ((index - p) * 100).toFixed(2);
-      return `inset(0% 0% 0% ${leftInset}%)`;
-    }
-    return "inset(0% 0% 0% 0%)";
-  });
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    if (index === 0) return p >= 1 ? 0 : 1;
-    if (p <= index - 1) return 0;
-    if (p < index + 1) return 1;
-    return 0;
-  });
-
-  const zIndex = 10 + index;
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
-      style={{ zIndex, clipPath, opacity }}
-    >
-      <div
-        className="absolute inset-0 h-full w-full"
-        style={{
-          // Dark plain background matching the bra color
-          background: `radial-gradient(circle at 50% 44%, ${slide.bgFrom} 0%, ${slide.bgTo} 100%)`,
-        }}
-      >
-        <div className="grain absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none" />
-        <div
-          className="absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: slide.braColor }}
-        />
-      </div>
-    </motion.div>
-  );
-}
-
-/**
  * SlideTitleBounceLayer Component:
  * Sits directly BEHIND the stationary product bra (z-20 range).
  * Comes from the left fast, overshoots to the right, and bounces back to center!
@@ -199,7 +144,7 @@ function SlideTitleBounceLayer({
     <motion.div
       aria-hidden="true"
       className="pointer-events-none absolute inset-x-0 top-[17%] sm:top-[22%] md:top-[23%] lg:top-[23%] -translate-y-1/2 flex items-center justify-center text-center z-20 px-4 will-change-[transform,opacity]"
-      style={{ x, opacity }}
+      style={{ x, opacity, visibility: useTransform(opacity, hiddenWhenClear) }}
     >
       <span
         className="font-sans font-black uppercase tracking-[-0.035em] leading-none whitespace-nowrap select-none max-w-[92vw] overflow-hidden"
@@ -216,10 +161,30 @@ function SlideTitleBounceLayer({
 }
 
 /**
+ * Product pose for a slide at signed distance d = progress − index.
+ * The outgoing product drifts left and fades out completely in the first 40% of a
+ * transition; the incoming one only starts to appear after the halfway point and
+ * settles in from the right — so two products are never on screen together.
+ */
+const EXIT_END = 0.4;
+const ENTER_SPAN = 0.45;
+function productPose(p: number, index: number, reduced: boolean) {
+  const d = p - index;
+  if (reduced) return { o: Math.abs(d) < 0.5 ? 1 : 0, x: 0, s: 1 };
+  if (d >= 0) {
+    const t = Math.min(1, d / EXIT_END); // 0 → 1 while leaving
+    return { o: 1 - t, x: -90 * t * t, s: 1 - 0.07 * t };
+  }
+  const u = Math.min(1, -d / ENTER_SPAN); // 1 → 0 while arriving
+  const e = u * u; // ease-out arrival
+  return { o: 1 - u, x: 90 * e, s: 1 - 0.07 * e };
+}
+
+/**
  * SlideStationaryBraLayer Component:
- * Sits directly in front of the big title (z-30 range).
- * Product bra coordinates are pixel-locked to the exact center (NEVER translate).
- * Wipes in parallel with the background gradient from right to left.
+ * Sits in front of the big title (z-30 range). Only the <img> is transformed
+ * (translate / scale / opacity — compositor only); its frame never moves, so the
+ * stage decor can measure the resting layout box at any moment.
  */
 function SlideStationaryBraLayer({
   slide,
@@ -234,57 +199,40 @@ function SlideStationaryBraLayer({
   progress: MotionValue<number>;
   isReducedMotion: boolean;
 }) {
-  const clipPath = useTransform(progress, (p) => {
-    if (isReducedMotion || index === 0) return "none";
-    if (p <= index - 1) return "inset(0% 0% 0% 100%)";
-    if (p < index) {
-      const leftInset = ((index - p) * 100).toFixed(2);
-      return `inset(0% 0% 0% ${leftInset}%)`;
-    }
-    return "inset(0% 0% 0% 0%)";
-  });
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    if (index === 0) return p >= 1 ? 0 : 1;
-    if (p <= index - 1) return 0;
-    if (p < index + 1) return 1;
-    return 0;
-  });
-
-  const zIndex = 30 + index;
+  const opacity = useTransform(progress, (p) => productPose(p, index, isReducedMotion).o);
+  const x = useTransform(progress, (p) => productPose(p, index, isReducedMotion).x);
+  const scale = useTransform(progress, (p) => productPose(p, index, isReducedMotion).s);
+  // Fully transparent layers drop out of compositing.
+  const visibility = useTransform(opacity, hiddenWhenClear);
   const hasTransparency = slide.isTransparent !== false;
 
   return (
-    <motion.div
+    <div
       role="group"
       aria-roledescription="slide"
       aria-label={`Slide ${index + 1} of ${totalSlides}: ${slide.productName}`}
-      className="absolute inset-0 h-full w-full pointer-events-none will-change-[clip-path,opacity]"
-      style={{ zIndex, clipPath, opacity }}
+      className="absolute inset-0 h-full w-full pointer-events-none"
+      style={{ zIndex: 30 + index }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-[40%] sm:top-[50%] md:top-[53%] lg:top-[54%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[var(--pc-m)] sm:top-[50%] md:top-[53%] lg:top-[50%] -translate-y-1/2 flex items-center justify-center z-10 px-4">
         <div
           className={`relative flex items-center justify-center ${
-            !hasTransparency
-              ? "rounded-3xl border border-border/40 bg-card/30 p-4 backdrop-blur-md"
-              : ""
+            !hasTransparency ? "rounded-3xl border border-border/40 bg-card/30 p-4" : ""
           }`}
         >
-          <img
+          <motion.img
             src={slide.image}
             alt={slide.alt || slide.productName}
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
+            decoding="async"
             draggable={false}
-            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[480px] xl:max-w-[520px] h-auto max-h-[32vh] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[48vh] object-contain select-none"
-            style={{ transform: "none" }}
+            className="max-w-[72vw] sm:max-w-[50vw] md:max-w-[420px] lg:max-w-[max(300px,min(440px,calc(100vw-760px)))] xl:max-w-[min(500px,calc(100vw-860px))] h-auto max-h-[var(--ph-m)] sm:max-h-[42vh] md:max-h-[46vh] lg:max-h-[46vh] object-contain select-none will-change-[transform,opacity]"
+            style={{ x, scale, opacity, visibility }}
           />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -316,7 +264,7 @@ function ProductSelector({
     <div
       role="radiogroup"
       aria-label="Choose innerwear product"
-      className={`inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-border/80 bg-card/90 px-2.5 py-1.5 backdrop-blur-xl shadow-soft md:shadow-md ${className}`}
+      className={`inline-flex items-center gap-2.5 rounded-full border border-white/80 bg-[#fdf6f4]/95 px-2.5 py-1.5 shadow-[0_10px_30px_-16px_rgba(90,30,50,0.45)] ${className}`}
     >
       {showcaseProducts.map((p) => {
         const isSelected = selectedProduct === p.id;
@@ -342,7 +290,7 @@ function ProductSelector({
               backgroundColor: activeSwatchBg,
               boxShadow: isSelected ? `0 0 0 2px var(--background), 0 0 0 4px ${ringColor}` : undefined,
             }}
-            className={`relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-300 ${
+            className={`relative flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-300 ${
               isSelected
                 ? "scale-110 shadow-sm"
                 : "opacity-75 hover:opacity-100 hover:scale-105"
@@ -368,6 +316,7 @@ function ProductInfoCardItem({
   isReducedMotion,
   onExplore,
   productSelector,
+  features,
 }: {
   slide: ShowcaseSlide;
   index: number;
@@ -375,6 +324,7 @@ function ProductInfoCardItem({
   isReducedMotion: boolean;
   onExplore: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   productSelector?: React.ReactNode;
+  features?: React.ReactNode;
 }) {
   // Bottom bounce trajectory: rises cleanly from bottom (+70px), overshoots slightly, settles to 0px
   const y = useTransform(progress, (p) => {
@@ -410,18 +360,13 @@ function ProductInfoCardItem({
         - Other devices (>= 640px): Kept strictly on the LEFT side with scaled typography & padding to prevent any image overlap.
       */}
       <motion.div
-        className="absolute z-[60] inset-x-3 bottom-14 sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[260px] md:max-w-[290px] lg:max-w-[340px] will-change-[transform,opacity]"
-        style={{ opacity, y, pointerEvents }}
+        data-slide-stack
+        className="absolute z-[60] inset-x-4 bottom-[3.4rem] sm:inset-x-auto sm:left-6 md:left-10 lg:left-14 xl:left-20 sm:bottom-12 md:bottom-16 sm:max-w-[300px] md:max-w-[330px] lg:max-w-[310px] xl:max-w-[340px] will-change-[transform,opacity]"
+        style={{ opacity, y, pointerEvents, visibility: useTransform(opacity, hiddenWhenClear) }}
       >
-        {/* Mobile Product Selector: Positioned JUST ABOVE the content card */}
-        {productSelector && (
-          <div className="sm:hidden mb-2.5 flex items-center justify-center pointer-events-auto">
-            {productSelector}
-          </div>
-        )}
-
-        <div className="mx-auto max-w-sm sm:max-w-none text-center sm:text-left rounded-2xl sm:rounded-3xl border border-border/80 bg-card/90 p-4 sm:p-4 md:p-5 lg:p-6 backdrop-blur-xl shadow-soft md:shadow-lg">
-          <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 sm:mb-2">
+        {/* Solid (non-blurred) card: a backdrop blur over moving layers is re-computed every scroll frame */}
+        <div className="mx-auto max-w-md sm:max-w-none text-center sm:text-left rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-4 py-3.5 sm:p-4 md:p-5 lg:px-5 lg:py-4 shadow-[0_18px_44px_-22px_rgba(90,30,50,0.45)]">
+          <div className="flex items-center justify-center sm:justify-start gap-2 mb-1 sm:mb-2">
             <span
               className="inline-flex h-2 w-2 rounded-full shrink-0"
               style={{
@@ -438,32 +383,45 @@ function ProductInfoCardItem({
           </div>
 
           <h3
-            className="font-display text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight"
+            className="font-display text-[1.35rem] sm:text-xl md:text-2xl lg:text-[1.65rem] font-bold tracking-tight leading-tight"
             style={{ color: slide.darkColor }}
           >
             {slide.productName}
           </h3>
 
-          <p className="mt-1.5 text-xs sm:text-xs md:text-sm text-muted-foreground line-clamp-2 leading-relaxed font-sans">
+          <p className="mt-1 sm:mt-1.5 text-xs md:text-sm text-muted-foreground line-clamp-2 leading-relaxed font-sans max-sm:[@media(max-height:640px)]:hidden sm:[@media(max-height:680px)]:hidden">
             {slide.shortDescription}
           </p>
 
-          {/* Centered CTA button inside the card on mobile only (< 640px) */}
-          <div className="mt-3.5 flex items-center justify-center sm:hidden">
-            <a
-              href={slide.link || "#shop"}
-              onClick={onExplore}
-              style={{
-                backgroundColor: slide.darkColor,
-                color: "#ffffff",
-                boxShadow: `0 4px 14px ${slide.darkColor}40`,
-              }}
-              className="group inline-flex min-h-10 items-center gap-2 rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:brightness-110 active:scale-95 shadow-md focus-visible:ring-2 focus-visible:ring-offset-2"
-            >
-              <span>{slide.ctaLabel || "Shop This Look"}</span>
-              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-            </a>
+          {/* Feature icons (hidden on very short phones to keep everything on one screen) */}
+          {features && (
+            <div className="mt-3 border-t border-[#2a1216]/8 pt-3 max-sm:[@media(max-height:700px)]:hidden">
+              {features}
+            </div>
+          )}
+        </div>
+
+        {/* Phones: product selector, then a full-width CTA — below the card */}
+        {productSelector && (
+          <div className="sm:hidden mt-2.5 flex items-center justify-center pointer-events-auto">
+            {productSelector}
           </div>
+        )}
+        <div className="mt-2.5 flex items-center justify-center sm:hidden">
+          <a
+            href={slide.link || "#shop"}
+            data-look={slide.id}
+            onClick={onExplore}
+            style={{
+              backgroundColor: slide.darkColor,
+              color: "#ffffff",
+              boxShadow: `0 8px 22px -6px ${slide.darkColor}80`,
+            }}
+            className="group inline-flex min-h-11 w-full max-w-xs items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:brightness-110 active:scale-95 focus-visible:ring-2 focus-visible:ring-offset-2"
+          >
+            <span>{slide.ctaLabel || "Shop This Look"}</span>
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </a>
         </div>
       </motion.div>
 
@@ -473,20 +431,21 @@ function ProductInfoCardItem({
       */}
       <motion.div
         className="hidden sm:flex flex-col items-end gap-3 absolute z-[60] right-6 md:right-10 lg:right-14 xl:right-20 sm:bottom-12 md:bottom-16 will-change-[transform,opacity]"
-        style={{ opacity, y, pointerEvents }}
+        style={{ opacity, y, pointerEvents, visibility: useTransform(opacity, hiddenWhenClear) }}
       >
         {/* Desktop Product Selector: Positioned JUST ABOVE the button */}
         {productSelector}
 
         <a
           href={slide.link || "#shop"}
+          data-look={slide.id}
           onClick={onExplore}
           style={{
             backgroundColor: slide.darkColor,
             color: "#ffffff",
             boxShadow: `0 6px 20px ${slide.darkColor}45`,
           }}
-          className="group inline-flex min-h-11 md:min-h-12 items-center gap-2.5 rounded-full px-5 py-2.5 md:px-6 md:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 shadow-md md:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="group inline-flex min-h-11 md:min-h-12 lg:min-h-14 items-center gap-2.5 rounded-full px-5 py-2.5 md:px-6 md:py-3 lg:px-8 text-xs sm:text-sm lg:text-base font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 shadow-md md:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           <span>{slide.ctaLabel || "Shop This Look"}</span>
           <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -507,11 +466,13 @@ function FloatingAccentsItem({
   index,
   progress,
   isReducedMotion,
+  isActive = true,
 }: {
   slide: ShowcaseSlide;
   index: number;
   progress: MotionValue<number>;
   isReducedMotion: boolean;
+  isActive?: boolean;
 }) {
   const x = useTransform(progress, (p) => {
     if (isReducedMotion) return "0px";
@@ -540,8 +501,11 @@ function FloatingAccentsItem({
 
   return (
     <motion.div
-      className="absolute inset-0 h-full w-full pointer-events-none will-change-[transform,opacity]"
-      style={{ x, opacity }}
+      className={`absolute inset-0 h-full w-full pointer-events-none will-change-[transform,opacity] ${
+        // Ambient spin/pulse only runs for the slide on screen; neighbours stay still.
+        isActive ? "" : "[&_*]:[animation-play-state:paused]"
+      }`}
+      style={{ x, opacity, visibility: useTransform(opacity, hiddenWhenClear) }}
     >
       {/* 1. Delicate 5-petal blossom top-left */}
       <div className="absolute left-[7%] sm:left-[11%] lg:left-[15%] top-[13%] sm:top-[15%] h-8 w-8 sm:h-11 sm:w-11 opacity-45 animate-[spin_45s_linear_infinite]">
@@ -623,15 +587,13 @@ export function ProductShowcaseSlider() {
     currentIndexRef.current = 0;
     progress.set(0);
 
-    // Scroll window smoothly to the top of the showcase track to reset to first color
+    // Jump to the top of the showcase track to reset to the first colour
     if (typeof window !== "undefined" && trackRef.current) {
       isProgrammaticUntilRef.current = Date.now() + 850;
       const rect = trackRef.current.getBoundingClientRect();
       const trackTop = window.scrollY + rect.top;
-      window.scrollTo({
-        top: trackTop,
-        behavior: "smooth",
-      });
+      // Instant (see goToSlide): a smooth scroll would outlive the lock and flash old slides.
+      window.scrollTo({ top: trackTop, behavior: "instant" });
     }
   };
 
@@ -723,7 +685,9 @@ export function ProductShowcaseSlider() {
         const scrollableDistance = trackRef.current.offsetHeight - window.innerHeight;
         if (scrollableDistance > 50) {
           const targetY = trackTop + (target / (totalSlides - 1)) * scrollableDistance;
-          window.scrollTo({ top: targetY, behavior: isTouchModeRef.current ? "instant" : "smooth" });
+          // Instant: the section is pinned, so the page does not visibly move. A smooth scroll
+          // would still be running when the lock below expires and drag the slide back.
+          window.scrollTo({ top: targetY, behavior: "instant" });
         }
       }
 
@@ -899,6 +863,7 @@ export function ProductShowcaseSlider() {
         return;
       }
       const t = e.touches[0];
+      if (!t) return;
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
       touchStartTimeRef.current = Date.now();
       isTouchNavigatingRef.current = false;
@@ -915,6 +880,7 @@ export function ProductShowcaseSlider() {
       if (!isPinned) return;
 
       const t = e.touches[0];
+      if (!t) return;
       const dx = t.clientX - touchStartPosRef.current.x;
       const dy = t.clientY - touchStartPosRef.current.y;
       const absDx = Math.abs(dx);
@@ -1000,14 +966,108 @@ export function ProductShowcaseSlider() {
     };
   }, [goToSlide, totalSlides]);
 
+  // 4. AUTOPLAY (colourways change on their own, like the 3-piece box section)
+  // Runs only while the slider is pinned on screen, the tab is visible, motion is
+  // allowed and the visitor has been idle for AUTOPLAY_IDLE_MS. Any wheel, touch,
+  // key, pointer or user scroll pauses it immediately. Because the slide is tied to
+  // the scroll position, autoplay moves the scroll position *instantly* inside the
+  // pinned track (no smooth-scroll tug-of-war), so the page itself never moves.
+  const lastUserInputRef = useRef(0);
+  const [autoplayActive, setAutoplayActive] = useState(false);
+  const autoplayActiveRef = useRef(false);
+  autoplayActiveRef.current = autoplayActive;
+
+  const autoAdvance = useCallback(
+    (target: number) => {
+      const from = currentIndexRef.current;
+      setCurrentIndex(target);
+      currentIndexRef.current = target;
+      isProgrammaticUntilRef.current = Date.now() + 900;
+
+      if (trackRef.current) {
+        const rect = trackRef.current.getBoundingClientRect();
+        const trackTop = window.scrollY + rect.top;
+        const scrollableDistance = trackRef.current.offsetHeight - window.innerHeight;
+        if (scrollableDistance > 50) {
+          const targetY = trackTop + (target / (totalSlides - 1)) * scrollableDistance;
+          window.scrollTo({ top: targetY, behavior: "instant" });
+        }
+      }
+
+      activeAnimationRef.current?.stop();
+      activeAnimationRef.current = animate(progress, target, {
+        // looping back to the first colour plays as a quick rewind
+        duration: target < from ? 1.1 : 0.85,
+        ease: [0.22, 1, 0.36, 1],
+      });
+    },
+    [progress, totalSlides],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const markInput = () => {
+      lastUserInputRef.current = Date.now();
+      // Only touch React state when autoplay is actually running (scroll fires ~60×/s).
+      if (autoplayActiveRef.current) setAutoplayActive(false);
+    };
+    const onScroll = () => {
+      // Our own programmatic scrolls (dots, arrows, snapping, autoplay) don't count.
+      if (Date.now() > isProgrammaticUntilRef.current) markInput();
+    };
+    const tick = () => {
+      const el = trackRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const pinned = el.offsetHeight > vh + 50 && rect.top <= 25 && rect.bottom >= vh - 25;
+      const eligible =
+        pinned &&
+        !document.hidden &&
+        !isReducedMotion &&
+        !isTouchNavigatingRef.current &&
+        Date.now() - lastUserInputRef.current > AUTOPLAY_IDLE_MS;
+      setAutoplayActive((prev) => (prev === eligible ? prev : eligible));
+    };
+    const events = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+    events.forEach((ev) => window.addEventListener(ev, markInput, { passive: true }));
+    window.addEventListener("scroll", onScroll, { passive: true });
+    const id = window.setInterval(tick, 400);
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, markInput));
+      window.removeEventListener("scroll", onScroll);
+      window.clearInterval(id);
+    };
+  }, [isReducedMotion]);
+
+  useEffect(() => {
+    if (!autoplayActive) return;
+    const id = window.setTimeout(() => autoAdvance((currentIndexRef.current + 1) % totalSlides), AUTOPLAY_MS);
+    return () => window.clearTimeout(id);
+  }, [autoplayActive, currentIndex, totalSlides, autoAdvance]);
+
+  // 5. PHONE LAYOUT: measure the bottom stack (card + selector + CTA) once per
+  // resize, so the product, podium and arrows share the space above it exactly.
+  const [stackH, setStackH] = useState(360);
+  useEffect(() => {
+    const root = sliderRef.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const stacks = Array.from(root.querySelectorAll<HTMLElement>("[data-slide-stack]"));
+    const measure = () => {
+      const h = Math.max(0, ...stacks.map((s) => s.offsetHeight));
+      if (h > 0) setStackH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+    };
+    const ro = new ResizeObserver(measure);
+    stacks.forEach((s) => ro.observe(s));
+    measure();
+    return () => ro.disconnect();
+  }, [activeSlides]);
+
+  /** "Shop this look" → the same garment, in front on the hanger rail (see LOOK_TO_RAIL). */
   const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
-    e.preventDefault();
-    const shopEl = document.getElementById("shop");
-    if (shopEl) {
-      shopEl.scrollIntoView({ behavior: "smooth" });
-      window.history.pushState(null, "", "#shop");
-    }
+    const look = LOOK_TO_RAIL[e.currentTarget.dataset["look"] ?? ""];
+    if (look) goToRail(look.target, e);
   };
 
   const hasNextSlide = currentIndex < totalSlides - 1;
@@ -1041,13 +1101,26 @@ export function ProductShowcaseSlider() {
         onWheel={handleWheel}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        style={
+          {
+            // Phone layout (< 640px): free area between the title and the bottom stack.
+            "--stack": `${stackH + 64}px`, // stack + its bottom offset (dots) + gap
+            "--t": "calc(17% + 30px)", // just below the big colour word
+            "--pod": "60px", // room for the podium under the product
+            "--pc-m": "calc(var(--t) + (100% - var(--t) - var(--stack) - var(--pod)) / 2)",
+            "--ph-m": "max(120px, calc(100svh - 17svh - 30px - var(--stack) - var(--pod)))",
+          } as React.CSSProperties
+        }
       >
         {/* Same grain texture as Hero and other sections */}
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
 
         {/* Preload first slide image */}
         <link rel="preload" as="image" href={activeSlides[0]?.image} />
+
+        {/* 0. STAGE: colour halo, glow arc and podium behind the title and product */}
+        <ShowcaseStage slides={activeSlides} currentIndex={currentIndex} />
 
         {/* 1. BIG TYPOGRAPHY LAYER (Behind the bra, comes from left fast with bounce effect) */}
         {activeSlides.map((slide, idx) => (
@@ -1075,12 +1148,15 @@ export function ProductShowcaseSlider() {
         {/* 3. UNCLIPPED FLOATING ACCENTS LAYER (Comes from left fast with bounce effect) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[55] overflow-hidden">
           {activeSlides.map((slide, idx) => (
+            // All stay mounted (a stable layer tree is cheaper than re-creating layers
+            // while scrolling); only the slide on screen runs its ambient spin/pulse.
             <FloatingAccentsItem
               key={`accents-${slide.id}`}
               slide={slide}
               index={idx}
               progress={progress}
               isReducedMotion={isReducedMotion}
+              isActive={idx === currentIndex}
             />
           ))}
         </div>
@@ -1094,11 +1170,13 @@ export function ProductShowcaseSlider() {
             progress={progress}
             isReducedMotion={isReducedMotion}
             onExplore={handleExploreClick}
-          productSelector={<ProductSelector selectedProduct={selectedProduct} currentSlide={slide} onSelectProduct={handleSelectProduct} />}/>
+          productSelector={<ProductSelector selectedProduct={selectedProduct} currentSlide={slide} onSelectProduct={handleSelectProduct} />}
+            features={<FeatureRow features={FEATURES_BY_PRODUCT[selectedProduct]} color={slide.darkColor} />}
+          />
         ))}
 
-        {/* Desktop Navigation Arrows */}
-        <div className="pointer-events-none absolute inset-y-0 inset-x-4 lg:inset-x-8 hidden md:flex items-center justify-between z-[70]">
+        {/* Navigation Arrows — phones: level with the product; larger screens: vertically centred */}
+        <div className="pointer-events-none absolute inset-x-2 top-[var(--pc-m)] h-0 flex items-center justify-between z-[70] sm:inset-x-4 sm:top-0 sm:h-full lg:inset-x-8">
           <button
             type="button"
             aria-label="Previous design slide"
@@ -1107,11 +1185,11 @@ export function ProductShowcaseSlider() {
               e.stopPropagation();
               if (hasPrevSlide) goToSlide(currentIndex - 1);
             }}
-            className={`pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-border/80 bg-card/80 backdrop-blur-md text-foreground shadow-md transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-card hover:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+            className={`pointer-events-auto flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-white/80 bg-[#fdf6f4]/95 text-foreground shadow-[0_8px_24px_-12px_rgba(90,30,50,0.45)] transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-card hover:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
               !hasPrevSlide ? "opacity-25 cursor-not-allowed hover:scale-100" : "opacity-90 hover:opacity-100"
             }`}
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
 
           <button
@@ -1122,11 +1200,11 @@ export function ProductShowcaseSlider() {
               e.stopPropagation();
               if (hasNextSlide) goToSlide(currentIndex + 1);
             }}
-            className={`pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-border/80 bg-card/80 backdrop-blur-md text-foreground shadow-md transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-card hover:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+            className={`pointer-events-auto flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-white/80 bg-[#fdf6f4]/95 text-foreground shadow-[0_8px_24px_-12px_rgba(90,30,50,0.45)] transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-card hover:border-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
               !hasNextSlide ? "opacity-25 cursor-not-allowed hover:scale-100" : "opacity-90 hover:opacity-100"
             }`}
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
@@ -1135,7 +1213,7 @@ export function ProductShowcaseSlider() {
         <div
           role="tablist"
           aria-label="Showcase slide navigation"
-          className="absolute bottom-5 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 rounded-full border border-border/80 bg-card/85 px-4 py-2 backdrop-blur-md shadow-md"
+          className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 rounded-full border border-white/80 bg-[#fdf6f4]/95 px-4 py-2 shadow-[0_8px_24px_-12px_rgba(90,30,50,0.4)]"
         >
           {activeSlides.map((slide, idx) => {
             const isActive = idx === currentIndex;
@@ -1150,18 +1228,31 @@ export function ProductShowcaseSlider() {
                   e.stopPropagation();
                   goToSlide(idx);
                 }}
-                className={`relative rounded-full transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
-                  isActive ? "h-2.5 w-7 sm:w-8" : "h-2 w-2 sm:h-2.5 sm:w-2.5 bg-foreground/20 hover:bg-foreground/50"
+                className={`relative overflow-hidden rounded-full transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                  isActive ? "h-2.5 w-9 sm:w-10" : "h-2 w-2 sm:h-2.5 sm:w-2.5 bg-foreground/20 hover:bg-foreground/50"
                 }`}
                 style={
                   isActive
                     ? {
-                        backgroundColor: slide.braColor,
-                        boxShadow: `0 0 10px ${slide.braColor}`,
+                        backgroundColor: `color-mix(in oklab, ${slide.braColor} 35%, transparent)`,
+                        boxShadow: `0 0 10px ${slide.braColor}80`,
                       }
                     : undefined
                 }
-              />
+              >
+                {/* Autoplay progress (same idea as the 3-piece box swatch ring); full when paused */}
+                {isActive && (
+                  <motion.span
+                    key={`fill-${slide.id}-${autoplayActive}`}
+                    aria-hidden
+                    className="absolute inset-0 origin-left rounded-full"
+                    style={{ backgroundColor: slide.braColor }}
+                    initial={{ scaleX: autoplayActive ? 0 : 1 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: autoplayActive ? AUTOPLAY_MS / 1000 : 0.2, ease: "linear" }}
+                  />
+                )}
+              </button>
             );
           })}
         </div>
@@ -1169,7 +1260,7 @@ export function ProductShowcaseSlider() {
         {/* Scroll Hint on First View - Positioned above the info card so it never overlaps */}
         {!hasInteracted && (
           <div
-            className="pointer-events-none absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-4 py-1.5 backdrop-blur-md text-foreground text-xs font-medium tracking-wide shadow-md transition-opacity duration-500 animate-pulse"
+            className="pointer-events-none absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[70] hidden sm:flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-4 py-1.5 backdrop-blur-md text-foreground text-xs font-medium tracking-wide shadow-md transition-opacity duration-500 animate-pulse"
           >
             <Hand className="h-3.5 w-3.5 text-primary animate-bounce" />
             <span>Scroll down to explore designs</span>

@@ -82,7 +82,7 @@ export function IntroLoader({ onComplete }: IntroLoaderProps) {
       initial={{ opacity: 1 }}
       animate={{ opacity: isExiting ? 0 : 1 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FEFDF8] px-6 select-none overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#fbf1ee] px-6 select-none overflow-hidden"
       style={{ willChange: "opacity", pointerEvents: isExiting ? "none" : "auto" }}
       aria-label="RIDOZ Style Loading"
       role="status"

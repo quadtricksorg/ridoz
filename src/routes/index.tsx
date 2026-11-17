@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type ReactNode, type MouseEvent, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from "react";
 import {
   motion,
   AnimatePresence,
@@ -13,22 +13,21 @@ import {
   useVelocity,
   type Variants,
 } from "framer-motion";
-import { Phone, Menu, X, ArrowUpRight, Star, Instagram, Facebook, Youtube, Wind, Feather, ShieldCheck, Leaf, Move } from "lucide-react";
+import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck } from "lucide-react";
 import { Magnet } from "@/components/ui/magnetic";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
-import vest from "@/assets/c-vest.png";
-import trunk from "@/assets/c-trunk.png";
-import bra from "@/assets/c-bra.png";
-import brief from "@/assets/c-brief.png";
-import panty from "@/assets/c-panty.png";
-import tee from "@/assets/c-tee.png";
+import { productById } from "@/data/products";
+import { NewArrivals } from "@/components/new-arrivals/hanger-rail";
+import { EveryBodyHero } from "@/components/hero/every-body-hero";
+import { ClientsSection } from "@/components/clients/clients-section";
+import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
 import fabric from "@/assets/fabric.jpg";
-import silkRibbon from "@/assets/silk-ribbon.jpg";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
+import { TrioBoxShowcase } from "@/components/showcase/trio-box-showcase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,19 +61,35 @@ export const Route = createFileRoute("/")({
 
 const PHONE = "+91 7510441075";
 const TEL = `tel:${PHONE.replace(/\s/g, "")}`;
+const EMAIL = "faisalcpulakkal@gmail.com";
+const INSTAGRAM_URL = "https://www.instagram.com/ridoz_style?utm_source=ig_web_button_share_sheet&obrf=ZDNlZDc0MzIxNw==";
+const MAPS_URL = "https://maps.app.goo.gl/dF8pQshLZfj1kH2E6";
+/** Gmail's web composer — what desktops open, and the fallback on phones. */
+const GMAIL_WEB = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(EMAIL)}`;
+
+/** New email to RIDOZ in Gmail: the Gmail app on phones (web Gmail if it isn't installed), web Gmail on desktops. */
+function openGmail(e: React.MouseEvent<HTMLAnchorElement>) {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    e.preventDefault();
+    // "intent:" (no //) → Android builds a clean "mailto:address"; "intent://" would give "mailto://address".
+    window.location.href = `intent:${EMAIL}#Intent;action=android.intent.action.SENDTO;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(GMAIL_WEB)};end`;
+  } else if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    e.preventDefault();
+    // Gmail app not installed → the page stays visible, so fall back to web Gmail.
+    const fallback = setTimeout(() => {
+      if (document.visibilityState === "visible") window.location.href = GMAIL_WEB;
+    }, 1200);
+    document.addEventListener("visibilitychange", () => clearTimeout(fallback), { once: true });
+    window.location.href = `googlegmail:///co?to=${encodeURIComponent(EMAIL)}`;
+  }
+  // Desktops: the link itself opens web Gmail in a new tab.
+}
 const WHATSAPP_NUMBER = PHONE.replace(/\D/g, "");
 const WHATSAPP_ENQUIRY_MESSAGE =
   "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
 const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
-type P = { name: string; short: string; img: string; tag: string; sw: string };
-const products: P[] = [
-  { name: "Wine Trunk Boxer", short: "TRUNK", img: trunk, tag: "Men", sw: "var(--swatch-wine)" },
-  { name: "Caramel Comfort Bra", short: "BRA", img: bra, tag: "Women", sw: "var(--swatch-sand)" },
-  { name: "Navy Classic Brief", short: "BRIEF", img: brief, tag: "Men", sw: "var(--swatch-navy)" },
-  { name: "Teal High-Waist Panty", short: "PANTY", img: panty, tag: "Women", sw: "var(--swatch-teal)" },
-  { name: "Ribbed Cotton Vest", short: "VEST", img: vest, tag: "Men", sw: "var(--swatch-cloud)" },
-  { name: "Classic Crew Undershirt", short: "CREW", img: tee, tag: "Men", sw: "var(--swatch-slate)" },
-];
+const trunk = productById("trunk-maroon").image;
 const reviews = [
   { t: "Comfort You Can Feel", q: "Soft fabric that stays comfortable from morning meetings to late nights.", n: "Anjali R." },
   { t: "Quality That Matters", q: "Stitching holds up wash after wash. The waistband never rolls.", n: "Rahul M." },
@@ -130,7 +145,7 @@ function Header() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
   });
-  const links = ["Drop", "Designs", "Shop", "Collections", "Reviews", "Contact"];
+  const links = ["Drop", "Designs", "Shop", "Reviews", "Clients", "Contact"];
   const [activeSection, setActiveSection] = useState("Drop");
 
   useEffect(() => {
@@ -148,6 +163,7 @@ function Header() {
       const threshold = 180;
       for (let i = links.length - 1; i >= 0; i--) {
         const link = links[i];
+        if (!link) continue;
         const el = document.getElementById(link.toLowerCase());
         if (el) {
           const rect = el.getBoundingClientRect();
@@ -185,7 +201,7 @@ function Header() {
   };
   return (
     <header className="fixed inset-x-0 top-4 z-50 px-4">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border bg-background/80 px-5 py-2.5 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-[#a51538]/10 bg-gradient-to-r from-[#fdf5f2]/85 via-[#f9ebe7]/85 to-[#f5e1dc]/85 px-5 py-2.5 shadow-[0_8px_30px_-12px_rgba(120,30,50,0.25)] backdrop-blur-xl">
         <a
           href="#drop"
           onClick={(e) => handleNavClick(e, "Drop")}
@@ -276,269 +292,6 @@ function Header() {
   );
 }
 
-function Hero() {
-  const [i, setI] = useState(0);
-  const p = products[i] ?? products[0]!;
-  const ref = useRef<HTMLElement>(null);
-  const isInteracting = useRef(false);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 120, damping: 16 });
-  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 16 });
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const imgY = useTransform(scrollYProgress, [0, 1], [0, -70]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (!isInteracting.current) {
-        setI((v) => (v + 1) % products.length);
-      }
-    }, 5500);
-    return () => clearInterval(t);
-  }, [i]);
-
-  const move = (e: MouseEvent<HTMLElement>) => {
-    if (isInteracting.current) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-
-  const handleTouchMove = (e: TouchEvent<HTMLElement>) => {
-    if (isInteracting.current || !e.touches[0] || !ref.current) return;
-    const t = e.touches[0];
-    const r = ref.current.getBoundingClientRect();
-    mx.set((t.clientX - r.left) / r.width - 0.5);
-    my.set((t.clientY - r.top) / r.height - 0.5);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isInteracting.current) {
-      mx.set(0);
-      my.set(0);
-    }
-  };
-
-  return (
-    <section
-      ref={ref}
-      id="drop"
-      onMouseMove={move}
-      onMouseLeave={() => { if (!isInteracting.current) { mx.set(0); my.set(0); } }}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      className="relative flex min-h-[100svh] items-center justify-center overflow-visible pt-20 pb-6 sm:pt-28 sm:pb-12 md:h-[100svh] md:max-h-[100svh] md:pt-28 lg:pt-32 md:pb-8"
-    >
-      <div className="grain absolute inset-0 -z-10 opacity-60" />
-
-      <div className="mx-auto grid w-full max-w-7xl items-center gap-6 px-5 sm:gap-8 sm:px-8 md:px-14 lg:px-20 xl:px-24 md:grid-cols-[1.05fr_1.3fr_1.1fr] md:items-start md:gap-8 lg:gap-12 xl:gap-14">
-        {/* Left Column: Headline & Action */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="relative z-10 flex flex-col justify-center pt-2 md:pt-5">
-          <motion.h1 variants={rise} className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.94]">
-            Comfort<br />meets<br /><em className="font-semibold text-primary">confidence.</em>
-          </motion.h1>
-          <div className="my-2.5 h-[2px] w-12 bg-primary/70 md:hidden" />
-          <motion.p variants={rise} className="mt-2 md:mt-4 max-w-sm text-xs sm:text-sm md:text-base leading-relaxed text-muted-foreground">
-            Seamless support, all-day comfort. Engineered for performance, made for every day.
-          </motion.p>
-          <motion.div variants={rise} className="mt-5 hidden md:block lg:mt-8">
-            <Magnet strength={0.35}>
-              <a
-                href="#shop"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
-                  window.history.pushState(null, "", "#shop");
-                }}
-                className="btn-sweep group inline-flex min-h-11 sm:min-h-12 items-center gap-2.5 rounded-full border border-primary px-6 text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground shadow-xs"
-              >
-                Explore the drop <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-              </a>
-            </Magnet>
-          </motion.div>
-        </motion.div>
-
-        {/* Center Column: Prominent Circle Backdrop + Interactive Wear Product */}
-        <motion.div style={{ y: imgY, perspective: 1200 }} className="relative flex items-center justify-center will-change-transform py-4 md:py-0 self-center">
-          {/* Circle backdrop - darker matching selection swatch, increased size */}
-          <motion.div
-            animate={{ backgroundColor: p.sw }}
-            transition={{ duration: 1.1 }}
-            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[300px] sm:w-[380px] md:w-[420px] lg:w-[500px] xl:w-[560px] 2xl:w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden shadow-2xl md:shadow-none opacity-95 will-change-transform border border-white/40"
-          >
-            <motion.img
-              key={p.img}
-              initial={{ scale: 1.15, rotate: -3, opacity: 0 }}
-              animate={{ scale: 1.05, rotate: 0, opacity: 0.18 }}
-              transition={{ duration: 0.8 }}
-              src={silkRibbon}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center mix-blend-multiply pointer-events-none select-none"
-            />
-            <div className="absolute inset-0 bg-radial from-transparent via-transparent to-black/15 pointer-events-none" />
-          </motion.div>
-
-          {/* Wear image with soft contact shadow: concentric inside circle */}
-          <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="relative flex flex-col items-center justify-center">
-            <motion.div
-              drag
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.25}
-              dragTransition={{ bounceStiffness: 300, bounceDamping: 22 }}
-              whileDrag={{ scale: 1.05 }}
-              onPointerDown={() => { isInteracting.current = true; }}
-              onDragStart={() => { isInteracting.current = true; }}
-              onDrag={(_, info) => {
-                isInteracting.current = true;
-                mx.set(Math.max(-0.6, Math.min(0.6, info.offset.x / 180)));
-                my.set(Math.max(-0.6, Math.min(0.6, info.offset.y / 180)));
-              }}
-              onDragEnd={(_, info) => {
-                isInteracting.current = false;
-                mx.set(0);
-                my.set(0);
-                if (info.offset.x < -45 || info.velocity.x < -300) {
-                  setI((v) => (v + 1) % products.length);
-                } else if (info.offset.x > 45 || info.velocity.x > 300) {
-                  setI((v) => (v - 1 + products.length) % products.length);
-                }
-              }}
-              className="cursor-grab active:cursor-grabbing touch-pan-y select-none will-change-transform"
-            >
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={p.img}
-                  src={p.img}
-                  alt={p.name}
-                  width={800}
-                  height={1000}
-                  draggable={false}
-                  decoding="async"
-                  style={{ rotateX: rx, rotateY: ry }}
-                  initial={{ opacity: 0, scale: 0.72, rotate: -16, y: 40 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.75, rotate: 12, y: -30 }}
-                  transition={{ duration: 0.8, ease }}
-                  className="drop-product pointer-events-none w-[195px] sm:w-[235px] md:w-[275px] lg:w-[325px] xl:w-[365px] 2xl:w-[395px] select-none will-change-transform drop-shadow-md"
-                />
-              </AnimatePresence>
-            </motion.div>
-            {/* Ground shadow beneath the wear item */}
-            <motion.div
-              animate={{ scale: [1, 0.92, 1], opacity: [0.35, 0.22, 0.35] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="pointer-events-none -mt-3 sm:-mt-4 h-4 sm:h-5 w-36 sm:w-48 rounded-full bg-black/30 blur-md"
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Right Column: Title, Swatches & Feature Cards */}
-        <div className="relative z-10 flex flex-col items-start pt-2 md:pt-5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={p.name}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4, ease }}
-              className="w-full"
-            >
-              <p className="text-xs sm:text-sm font-semibold tracking-wider text-muted-foreground uppercase">{p.tag}</p>
-              <h2 className="mt-1 font-display text-2xl sm:text-3xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold tracking-tight text-foreground leading-tight">{p.name}</h2>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="my-3 sm:my-4 h-px w-14 bg-foreground/20" />
-
-          {/* Color Swatches */}
-          <div className="flex items-center gap-2.5 sm:gap-3" role="group" aria-label="Choose product">
-            {products.map((q, k) => (
-              <Magnet key={q.name} strength={0.4}>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={q.name}
-                  aria-pressed={k === i}
-                  onClick={() => setI(k)}
-                  style={{ backgroundColor: q.sw }}
-                  className={`relative h-10 w-10 sm:h-11 sm:w-11 md:h-10 md:w-10 lg:h-12 lg:w-12 shrink-0 cursor-pointer overflow-hidden rounded-full p-1.5 transition-all duration-200 shadow-sm ${
-                    k === i
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
-                      : "opacity-75 hover:opacity-100 hover:scale-105"
-                  }`}
-                >
-                  <img src={q.img} alt="" draggable={false} className="h-full w-full object-contain pointer-events-none" />
-                </motion.button>
-              </Magnet>
-            ))}
-          </div>
-
-          {/* Mobile view: 3-column horizontal card as in reference design */}
-          <div className="mt-4 w-full md:hidden">
-            <div className="rounded-2xl border border-border/70 bg-background/60 p-3 backdrop-blur-xs shadow-xs">
-              <div className="grid grid-cols-3 divide-x divide-border/60 text-center">
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Leaf className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">Ultra Soft Fabric</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Feels gentle on skin</p>
-                </div>
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Wind className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">Breathable All Day</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Keeps you fresh</p>
-                </div>
-                <div className="flex flex-col items-center px-1">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Move className="h-4 w-4" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-foreground">4-Way Stretch</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">Moves with you</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tablet & Desktop view: Stacked feature cards */}
-          <div className="mt-6 hidden w-full max-w-sm flex-col gap-3 md:flex">
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Leaf className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">Ultra Soft Fabric</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Feels gentle on skin</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Wind className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">Breathable All Day</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Keeps you fresh</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-background/60 p-3 sm:py-3 sm:px-3.5 backdrop-blur-xs shadow-xs transition hover:bg-background/80">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Move className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-semibold text-foreground">4-Way Stretch</p>
-                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">Moves with you</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const wrap = (min: number, max: number, v: number) => {
   const r = max - min;
   return ((((v - min) % r) + r) % r) + min;
@@ -582,251 +335,6 @@ function Marquee() {
   );
 }
 
-function ProductCard({ p, i }: { p: P; i: number }) {
-  return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 20, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      transition={{ duration: 0.35, ease }}
-      whileHover="hover"
-      className="group flex w-[68vw] max-w-[260px] shrink-0 snap-start flex-col sm:w-[44vw] lg:w-[calc((100%-5rem)/6)] lg:max-w-none"
-    >
-      <motion.div
-        variants={{ hover: { y: -6 } }}
-        transition={{ duration: 0.3, ease }}
-        className="relative overflow-hidden rounded-[1.75rem] border border-border"
-        style={{ backgroundColor: `color-mix(in oklab, ${p.sw} 22%, var(--card))` }}
-      >
-        <span
-          aria-hidden
-          className="absolute left-1/2 top-1/2 aspect-square w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 transition duration-700 group-hover:scale-110"
-          style={{ backgroundColor: p.sw }}
-        />
-        <span className="absolute left-3 top-3 z-10 rounded-full bg-background/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest backdrop-blur">
-          {p.tag}
-        </span>
-        <motion.img
-          variants={{ hover: { scale: 1.08, rotate: -4 } }}
-          transition={{ type: "spring", stiffness: 200, damping: 18 }}
-          src={p.img}
-          alt={p.name}
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          width={800}
-          height={1000}
-          className="drop-product relative mx-auto aspect-[4/5] w-[78%] object-contain py-6 pointer-events-none select-none"
-        />
-      </motion.div>
-      <div className="mt-4 px-1">
-        <h3 className="min-w-0 truncate text-sm font-semibold">{p.name}</h3>
-      </div>
-    </motion.article>
-  );
-}
-
-function Shop({
-  filter: controlledFilter,
-  onFilterChange,
-}: {
-  filter?: string;
-  onFilterChange?: (f: string) => void;
-} = {}) {
-  const [internalFilter, setInternalFilter] = useState("All");
-  const filter = controlledFilter !== undefined ? controlledFilter : internalFilter;
-  const setFilter = onFilterChange || setInternalFilter;
-  const list = products.filter((p) => filter === "All" || p.tag === filter);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isDown = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftPos = useRef(0);
-
-  useEffect(() => {
-    if (scrollRef.current && scrollRef.current.scrollLeft > 0) {
-      scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
-    }
-  }, [filter]);
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!scrollRef.current) return;
-    isDown.current = true;
-    startX.current = e.pageX - scrollRef.current.offsetLeft;
-    scrollLeftPos.current = scrollRef.current.scrollLeft;
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDown.current || !scrollRef.current) return;
-    const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
-  };
-
-  const onMouseUp = () => {
-    isDown.current = false;
-  };
-
-  return (
-    <section id="shop" className="mx-auto max-w-6xl px-5 py-12 sm:py-16 md:py-24 lg:py-28">
-      <div className="grid grid-cols-1 items-end gap-6 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div>
-          <Eyebrow>The collection</Eyebrow>
-          <SplitHeading className="mt-3 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl" lines={[{ text: "New" }, { text: "arrivals", className: "italic font-semibold text-primary" }]} />
-        </div>
-        <div className="flex max-w-full gap-2 overflow-x-auto no-scrollbar py-1 touch-auto" role="group" aria-label="Filter products">
-          {["All", "Men", "Women"].map((f) => (
-            <Magnet key={f} strength={0.3}>
-              <motion.button whileTap={{ scale: 0.94 }} aria-pressed={filter === f} onClick={() => setFilter(f)} className="relative min-h-11 cursor-pointer shrink-0 rounded-full border border-border px-6 text-sm font-semibold transition-colors duration-200 hover:border-primary">
-                {filter === f && <motion.span layoutId="filter-pill" transition={{ type: "spring", stiffness: 400, damping: 32 }} className="absolute inset-0 rounded-full bg-primary" />}
-                <span className={`relative ${filter === f ? "text-primary-foreground" : ""}`}>{f}</span>
-              </motion.button>
-            </Magnet>
-          ))}
-        </div>
-      </div>
-      <div
-        ref={scrollRef}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "auto" }}
-        className="no-scrollbar -mx-5 mt-6 sm:mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 lg:mx-0 lg:px-0 cursor-grab active:cursor-grabbing touch-auto select-none overscroll-x-contain"
-      >
-        <AnimatePresence mode="sync">
-          {list.map((p, k) => <ProductCard key={p.name} p={p} i={k} />)}
-        </AnimatePresence>
-      </div>
-    </section>
-  );
-}
-
-type Col = { t: string; s: string; n: string; items: string; tint: string; pics: { src: string; alt: string }[] };
-
-/** Fanned stack of cut-out products; spreads on hover and follows the pointer in layers. */
-function CollectionCard({ c, i, onSelect }: { c: Col; i: number; onSelect?: (category: string) => void }) {
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const px = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 18 });
-  const py = useSpring(useTransform(my, [-0.5, 0.5], [-8, 8]), { stiffness: 120, damping: 18 });
-  const move = (e: MouseEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-  const moveTouch = (e: TouchEvent<HTMLElement>) => {
-    if (!e.touches[0]) return;
-    const t = e.touches[0];
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((t.clientX - r.left) / r.width - 0.5);
-    my.set((t.clientY - r.top) / r.height - 0.5);
-  };
-  const endTouch = () => {
-    mx.set(0);
-    my.set(0);
-  };
-  const mid = (c.pics.length - 1) / 2;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onSelect?.(c.t);
-    const shopEl = document.getElementById("shop");
-    if (shopEl) {
-      shopEl.scrollIntoView({ behavior: "smooth" });
-      window.history.pushState(null, "", "#shop");
-    }
-  };
-  return (
-    <motion.a
-      href="#shop"
-      onClick={handleClick}
-      aria-label={`Shop ${c.t}'s collection`}
-      onMouseMove={move}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      onTouchMove={moveTouch}
-      onTouchEnd={endTouch}
-      initial="rest"
-      whileInView="show"
-      whileHover="hover"
-      viewport={{ once: true, margin: "-60px" }}
-      variants={{ rest: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0 }, hover: { opacity: 1, y: -6 } }}
-      transition={{ duration: 0.8, delay: i * 0.15, ease }}
-      className="group relative flex min-h-[340px] overflow-hidden rounded-[2rem] border border-border p-6 sm:min-h-[380px] sm:p-9"
-      style={{ backgroundColor: `color-mix(in oklab, ${c.tint} 24%, var(--card))` }}
-    >
-      <motion.span
-        aria-hidden
-        variants={{ rest: { scale: 0.6, opacity: 0 }, show: { scale: 1, opacity: 1 }, hover: { scale: 1.08, opacity: 1 } }}
-        transition={{ duration: 0.9, ease }}
-        className="pointer-events-none absolute -right-4 sm:-right-8 md:-right-4 lg:-right-12 top-1/2 aspect-square w-[58%] sm:w-[64%] md:w-[54%] lg:w-[65%] -translate-y-1/2 rounded-full opacity-40"
-        style={{ backgroundColor: c.tint }}
-      />
-      <div className="relative z-10 flex w-full max-w-[55%] sm:max-w-[52%] md:max-w-[48%] lg:max-w-[52%] flex-col justify-between">
-        <div>
-          <span className="font-display text-xl font-semibold text-primary [font-variant-numeric:lining-nums]">{c.n}</span>
-          <p className="mt-1 text-[11px] sm:text-xs font-semibold uppercase tracking-wider sm:tracking-[0.2em] text-muted-foreground leading-snug break-words">
-            {c.items}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs sm:text-sm text-muted-foreground">{c.s}</p>
-          <h3 className="mt-1 font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-none">{c.t}</h3>
-          <Magnet strength={0.4} className="mt-4 sm:mt-5">
-            <span className="btn-sweep inline-flex min-h-11 items-center gap-2 rounded-full border border-primary px-4 sm:px-5 text-xs sm:text-sm font-semibold text-primary transition-colors duration-300 [--btn-sweep:var(--primary)] group-hover:text-primary-foreground">
-              Shop {c.t} <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:rotate-45" />
-            </span>
-          </Magnet>
-        </div>
-      </div>
-      <motion.div style={{ x: px, y: py }} className="pointer-events-none absolute inset-y-0 right-0 w-[54%] sm:w-[58%] md:w-[48%] lg:w-[56%]">
-        {c.pics.map((pic, k) => {
-          const o = k - mid;
-          return (
-            <motion.img
-              key={pic.alt}
-              src={pic.src}
-              alt={pic.alt}
-              loading="lazy"
-              width={800}
-              height={1000}
-              variants={{
-                rest: { opacity: 0, y: 50, rotate: 0, x: 0 },
-                show: { opacity: 1, y: 0, rotate: o * 7, x: o * 18 },
-                hover: { opacity: 1, y: -8, rotate: o * 12, x: o * 30 },
-              }}
-              transition={{ type: "spring", stiffness: 140, damping: 16, delay: 0.25 + k * 0.1 }}
-              style={{ zIndex: 10 - Math.abs(Math.round(o * 2)) }}
-              className="drop-product absolute left-1/2 top-1/2 w-[60%] sm:w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain"
-            />
-          );
-        })}
-      </motion.div>
-    </motion.a>
-  );
-}
-
-function Collections({ onSelectCollection }: { onSelectCollection?: (category: string) => void } = {}) {
-  const cols: Col[] = [
-    { t: "Men", s: "Comfort meets confidence", n: "01", items: "Trunks · Briefs · Vests · Tees", tint: "var(--swatch-wine)", pics: [{ src: brief, alt: "Navy classic brief" }, { src: trunk, alt: "Wine trunk boxer" }, { src: vest, alt: "Ribbed cotton vest" }, { src: tee, alt: "Classic crew undershirt" }] },
-    { t: "Women", s: "Soft, seamless & breathable", n: "02", items: "Bras · Panties", tint: "var(--swatch-sand)", pics: [{ src: bra, alt: "Caramel comfort bra" }, { src: panty, alt: "Teal high-waist panty" }] },
-  ];
-  return (
-    <section id="collections" className="mx-auto max-w-6xl px-5 pb-12 sm:pb-16 md:pb-24">
-      <div className="mb-6 sm:mb-10 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Eyebrow>Two worlds</Eyebrow>
-          <SplitHeading className="mt-3 whitespace-nowrap font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl" lines={[{ text: "Shop by" }, { text: "collection", className: "italic font-semibold text-primary" }]} />
-        </div>
-        <Reveal><p className="max-w-xs text-sm leading-relaxed text-muted-foreground">Two worlds of everyday comfort — pick yours and never look back.</p></Reveal>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {cols.map((c, i) => <CollectionCard key={c.t} c={c} i={i} onSelect={onSelectCollection} />)}
-      </div>
-    </section>
-  );
-}
-
 function Feature() {
   const feats = [
     { i: Wind, t: "Breathable", d: "Micro-modal airflow" },
@@ -856,7 +364,7 @@ function Feature() {
             </div>
             <motion.div variants={rise} className="mt-7">
               <Magnet strength={0.35}>
-                <a href="#shop" className="btn-sweep group inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors duration-300 [--btn-sweep:var(--background)]">
+                <a href="#shop" onClick={(e) => goToRail(CTA_TO_RAIL.featureShopBoxers, e)} className="btn-sweep group inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors duration-300 [--btn-sweep:var(--background)]">
                   Shop boxers <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
                 </a>
               </Magnet>
@@ -867,7 +375,7 @@ function Feature() {
             <motion.div aria-hidden animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/50" />
             <motion.div aria-hidden animate={{ rotate: -360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }} className="absolute inset-8 rounded-full border border-secondary-foreground/20" />
             <div aria-hidden className="absolute inset-14 rounded-full bg-primary/50 blur-2xl" />
-            <motion.img style={{ rotate, y }} src={trunk} alt="Wine trunk boxer" loading="lazy" className="drop-product absolute inset-0 m-auto w-[68%]" />
+            <motion.img style={{ rotate, y }} src={trunk} alt="Maroon trunk" loading="lazy" className="drop-product absolute inset-0 m-auto w-[68%]" />
             {[
               { l: "Micro-modal", c: "left-0 top-[14%]", d: 0 },
               { l: "Anti-roll band", c: "bottom-[12%] right-0", d: 1.2 },
@@ -895,66 +403,123 @@ function Reviews() {
   );
 }
 
+/** WhatsApp glyph (lucide has no brand icons): chat bubble with a handset. */
+function WhatsAppIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3.5 20.5 4.8 16.7A8.5 8.5 0 1 1 8 19.6Z" />
+      <path d="M9.1 8.6c.2-.5.6-.6.9-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.3 0 .5-.1.7l-.5.6c-.1.2-.1.4 0 .6.5.9 1.3 1.7 2.3 2.2.2.1.4.1.6-.1l.6-.6c.2-.2.4-.2.7-.1l1.5.7c.3.1.4.3.4.6v.4c0 .4-.2.8-.6 1-.5.3-1.2.5-1.9.3-2.6-.7-4.6-2.6-5.5-5.1-.2-.7 0-1.4.4-2.2Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Accepted payment methods as small inline marks (no image requests). */
+function PaymentMark({ id }: { id: "upi" | "cod" }) {
+  const label = { upi: "UPI", cod: "Cash on delivery" }[id];
+  return (
+    <li
+      aria-label={label}
+      title={label}
+      className="flex h-11 min-w-[5.5rem] items-center justify-center rounded-xl border border-border bg-background/70 px-4 shadow-[0_6px_14px_-10px_rgba(90,30,50,0.35)]"
+    >
+      {id === "upi" && (
+        <span aria-hidden className="flex items-center gap-0.5 text-[15px] font-black italic tracking-tight text-[#4b4b4f]">
+          UPI
+          <svg viewBox="0 0 12 14" className="h-3.5 w-3">
+            <path d="M1 1 7 7 1 13Z" fill="#f47c20" />
+            <path d="M5 1 11 7 5 13Z" fill="#138a36" />
+          </svg>
+        </span>
+      )}
+      {id === "cod" && (
+        <span aria-hidden className="text-[15px] font-black italic tracking-tight text-foreground">
+          COD
+        </span>
+      )}
+    </li>
+  );
+}
+
 function Footer() {
+  const social = [
+    { I: Instagram, l: "RIDOZ on Instagram", href: INSTAGRAM_URL },
+    { I: Mail, l: `Email ${EMAIL} in Gmail`, href: GMAIL_WEB, onClick: openGmail },
+    { I: WhatsAppIcon, l: "Chat with RIDOZ on WhatsApp", href: WHATSAPP_ENQUIRY_URL },
+    { I: MapPin, l: "RIDOZ location on Google Maps", href: MAPS_URL },
+  ];
   return (
     <footer id="contact" className="relative overflow-hidden border-t border-border">
       <motion.p aria-hidden initial={{ y: "35%", opacity: 0 }} whileInView={{ y: "10%", opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1.2, ease }} className="pointer-events-none absolute inset-x-0 bottom-0 select-none whitespace-nowrap text-center font-display text-[26vw] font-bold leading-[0.75] tracking-tight text-muted">RIDOZ</motion.p>
-      <div className="relative z-10 mx-auto grid max-w-6xl gap-8 sm:gap-10 px-5 py-8 sm:py-12 md:py-14 md:grid-cols-3">
-        <div className="text-sm">
+
+      <div className="ft-grid relative z-10 mx-auto max-w-6xl px-5 pb-6 pt-10 sm:pt-12 md:pt-14">
+        {/* Brand */}
+        <div className="ft-brand">
           <BrandLogo variant="full" size="md" showWordmark={true} href="#drop" />
-          <p className="mt-3 text-muted-foreground">
+          <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-foreground/80">
             Precision-engineered everyday luxury. Crafted with breathable micro-modal and combed cotton.
           </p>
-          <div className="mt-4">
-            <p className="font-semibold uppercase tracking-widest text-primary text-xs">Customer Concierge</p>
-            <a href={TEL} className="mt-1 inline-flex min-h-11 items-center gap-2 font-semibold hover:text-primary transition-colors">
-              <Phone className="h-4 w-4" />{PHONE}
-            </a>
-          </div>
-          <div className="mt-4 flex gap-2">
-            {[
-              { I: Instagram, l: "Instagram" },
-              { I: Facebook, l: "Facebook" },
-              { I: Youtube, l: "YouTube" },
-            ].map(({ I, l }) => (
-              <Magnet key={l} strength={0.4}>
-                <a
-                  href="#contact"
-                  onClick={(e) => e.preventDefault()}
-                  aria-label={l}
-                  className="btn-sweep flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/60 transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground"
-                >
-                  <I className="h-4 w-4" />
-                </a>
-              </Magnet>
-            ))}
-          </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-2 text-sm text-muted-foreground">
-          {["Terms & Conditions", "Privacy Policy", "Returns & Exchanges", "Shipping & Delivery", "Contact Us", "Customer Care"].map((l) => (
-            <a
-              key={l}
-              href="#contact"
-              onClick={(e) => e.preventDefault()}
-              className="flex min-h-11 items-center transition-colors duration-200 hover:text-foreground"
-            >
-              {l}
-            </a>
+
+        {/* Social */}
+        <div className="ft-social flex flex-wrap gap-3 xl:gap-2.5">
+          {social.map(({ I, l, href, onClick }) => (
+            <Magnet key={l} strength={0.4}>
+              <a
+                href={href}
+                onClick={onClick}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={l}
+                title={l}
+                className="btn-sweep flex h-12 w-12 xl:h-11 xl:w-11 items-center justify-center rounded-full border border-primary/10 bg-primary/[0.07] text-foreground transition-colors duration-300 [--btn-sweep:var(--primary)] hover:text-primary-foreground"
+              >
+                <I className="h-5 w-5" />
+              </a>
+            </Magnet>
           ))}
         </div>
-        <div>
-          <p className="font-semibold uppercase tracking-widest text-primary text-xs">Payment & Trust</p>
-          <p className="mt-2 text-xs text-muted-foreground">100% Encrypted & Secure Checkout</p>
-          <div className="mt-3 flex flex-wrap content-start gap-2">
-            {["UPI", "VISA", "Mastercard", "RuPay", "COD"].map((p) => (
-              <span key={p} className="rounded-md border border-border bg-background/50 px-2.5 py-1 text-xs font-semibold">
-                {p}
-              </span>
+
+        {/* Customer care */}
+        <div className="ft-care">
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">Customer Concierge</p>
+          <ul className="mt-4 space-y-2">
+            <li>
+              <a href={TEL} className="group flex min-h-11 items-center gap-3 font-semibold transition-colors hover:text-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-foreground transition-colors group-hover:text-primary">
+                  <Phone className="h-[18px] w-[18px]" />
+                </span>
+                <span className="text-[15px]">{PHONE}</span>
+              </a>
+            </li>
+            <li>
+              <a href={GMAIL_WEB} onClick={openGmail} target="_blank" rel="noopener noreferrer" className="group flex min-h-11 items-center gap-3 font-semibold transition-colors hover:text-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-foreground transition-colors group-hover:text-primary">
+                  <Mail className="h-[18px] w-[18px]" />
+                </span>
+                <span className="min-w-0 text-[14px] xl:text-[13px]">
+                  {EMAIL.split("@")[0]}
+                  <wbr />@{EMAIL.split("@")[1]}
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {/* Payment & trust */}
+        <div className="ft-pay">
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">Payment & Trust</p>
+          <p className="mt-2 text-sm text-muted-foreground">100% Encrypted & Secure Checkout</p>
+          <ul aria-label="Accepted payment methods" className="mt-4 flex flex-wrap gap-2.5">
+            {(["upi", "cod"] as const).map((id) => (
+              <PaymentMark key={id} id={id} />
             ))}
-          </div>
+          </ul>
         </div>
       </div>
-      <p className="relative z-10 py-5 text-center text-xs text-muted-foreground">© 2026 RIDOZ Style Innerwears. All rights reserved.</p>
+
+      <div className="relative z-10 mx-auto max-w-6xl px-5">
+        <p className="border-t border-border py-5 text-center text-xs text-muted-foreground sm:text-sm">© 2026 RIDOZ Style Innerwears. All rights reserved.</p>
+      </div>
     </footer>
   );
 }
@@ -966,18 +531,13 @@ if (typeof window !== "undefined") {
 }
 
 function Index() {
-  const [shopFilter, setShopFilter] = useState("All");
 
   // Always come to top on refresh or load
+  // Always start at the top on load / refresh (scroll restoration is "manual" above).
+  // No "beforeunload" reset: phones fire it for tel:, mailto: and app links too, which
+  // threw the visitor back to the top while the page stayed open.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-    }
-    const onBeforeUnload = () => {
-      window.scrollTo(0, 0);
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    window.scrollTo(0, 0);
   }, []);
 
   const [loading, setLoading] = useState(() => {
@@ -1004,13 +564,14 @@ function Index() {
       <ScrollProgress />
       <Header />
       <main className="overflow-x-clip">
-        <Hero />
+        <EveryBodyHero />
         <ProductShowcaseSlider />
+        <TrioBoxShowcase />
         <Marquee />
-        <Shop filter={shopFilter} onFilterChange={setShopFilter} />
-        <Collections onSelectCollection={(cat) => setShopFilter(cat)} />
+        <NewArrivals />
         <Feature />
         <Reviews />
+        <ClientsSection partnerHref={WHATSAPP_ENQUIRY_URL} />
       </main>
       <Footer />
     </MotionConfig>

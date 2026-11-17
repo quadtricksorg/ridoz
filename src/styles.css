@@ -3,6 +3,15 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Two-column "wide" layout: desktops, and tablets/laptops held landscape. */
+@custom-variant wide {
+  @media (min-width: 1024px) {
+    @slot;
+  }
+  @media (min-width: 768px) and (orientation: landscape) {
+    @slot;
+  }
+}
 
 /*
  * Design system definition.
@@ -66,17 +75,17 @@
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.975 0.011 85);
+  --background: #f8ebe7; /* blush */
   --foreground: oklch(0.2 0.03 20);
-  --card: oklch(0.995 0.004 85);
+  --card: #fdf6f3;
   --card-foreground: oklch(0.2 0.03 20);
-  --popover: oklch(0.995 0.004 85);
+  --popover: #fdf6f3;
   --popover-foreground: oklch(0.2 0.03 20);
   --primary: #a51538;
   --primary-foreground: oklch(0.975 0.011 85);
   --secondary: oklch(0.24 0.06 18);
   --secondary-foreground: oklch(0.96 0.015 85);
-  --muted: oklch(0.935 0.014 80);
+  --muted: #f2e1dc;
   --muted-foreground: oklch(0.44 0.025 40);
   --accent: oklch(0.82 0.09 78);
   --accent-foreground: oklch(0.24 0.06 18);
@@ -194,4 +203,39 @@ html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
   &:focus-visible::before {
     transform: translateY(0);
   }
+}
+
+/*
+ * Premium blush backdrop shared by every section: soft window light from the
+ * top-left over a blush gradient. It is a fixed, composited layer, so it costs
+ * nothing while scrolling. Sections with their own colour (e.g. the wine bands)
+ * simply paint over it.
+ */
+@layer base {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -50;
+    pointer-events: none;
+    background:
+      linear-gradient(118deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0) 40%),
+      radial-gradient(55% 45% at 82% 28%, rgb(255 255 255 / 0.4) 0%, rgb(255 255 255 / 0) 70%),
+      linear-gradient(165deg, #fcf3f0 0%, #f7e8e3 50%, #f2dbd5 100%);
+  }
+}
+
+/* Footer layout: stacked on phones, 2 columns on tablets/small laptops, 3 divided columns from 1280px */
+.ft-grid { display: grid; row-gap: 2rem; grid-template-columns: minmax(0, 1fr); grid-template-areas: "brand" "care" "social" "pay"; }
+.ft-brand { grid-area: brand; } .ft-care { grid-area: care; } .ft-social { grid-area: social; } .ft-pay { grid-area: pay; }
+@media (min-width: 768px) {
+  .ft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2.5rem; row-gap: 1.75rem;
+    grid-template-areas: "brand care" "social pay"; }
+}
+@media (min-width: 1280px) {
+  .ft-grid { grid-template-columns: 1fr 1fr 1fr; column-gap: 0; row-gap: 1.5rem;
+    grid-template-areas: "brand care pay" "social care pay"; }
+  .ft-brand, .ft-social { padding-right: 2rem; }
+  .ft-care, .ft-pay { border-left: 1px solid var(--border); padding-left: 2rem; padding-right: 1.5rem; }
+  .ft-pay { padding-right: 0; }
 }
