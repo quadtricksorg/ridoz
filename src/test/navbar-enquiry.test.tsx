@@ -2,15 +2,15 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Route } from "@/routes/index";
 
-describe("Navbar Enquiry WhatsApp Button", () => {
-  it("renders Enquiry button pointing to WhatsApp with pre-filled message", () => {
+describe("Navbar 'Chat with us' WhatsApp Button", () => {
+  it("renders 'Chat with us' button pointing to WhatsApp with pre-filled message", () => {
     const Component = Route.options.component;
     if (!Component) throw new Error("Component not found on Route");
 
     render(<Component />);
 
-    // Query enquiry buttons (desktop and mobile)
-    const enquiryButtons = screen.getAllByRole("link", { name: /^Enquiry$/i });
+    // Query "Chat with us" buttons (desktop and mobile)
+    const enquiryButtons = screen.getAllByRole("link", { name: /^Chat with us$/i });
     expect(enquiryButtons.length).toBeGreaterThanOrEqual(1);
 
     const desktopButton = enquiryButtons[0]!;
@@ -27,7 +27,7 @@ describe("Navbar Enquiry WhatsApp Button", () => {
 
     const messageParam = url.searchParams.get("text");
     expect(messageParam).toBe(
-      "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you."
+      "Hi, I'm interested in your innerwear products. Could you please share details."
     );
 
     // Security attributes for external links
