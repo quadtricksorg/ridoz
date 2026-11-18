@@ -21,7 +21,7 @@ import menTall640 from "@/assets/hero/every-body-men-tall-640.webp";
  * Regenerate the images with scratch/generate-every-body-hero.mjs.
  */
 
-const SLIDE_MS = 7000;
+const SLIDE_MS = 4500;
 const TALL = "(max-aspect-ratio: 1/1)";
 
 /** Hair strand: region [x, y, w, h], pivot [px, py] (image px), swing angle (deg), period (s), delay (s). */

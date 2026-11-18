@@ -89,11 +89,11 @@ const BOXES: BoxVariant[] = [
 
 const ALL_PANTY_IMAGES = BOXES.flatMap((b) => b.panties.flatMap((p) => [p.image, p.folded]));
 
-const AUTOPLAY_MS = 2800;
+const AUTOPLAY_MS = 1800;
 const WIDE_QUERY = "(min-width: 1024px), (min-width: 768px) and (orientation: landscape)"; // keep in sync with @custom-variant wide
 const MOBILE_GAPS = 20; // flex gaps between intro / stage / controls on phones
 const MIN_STAGE_MOBILE = 170; // smallest podium scene before the layout scales down
-const MANUAL_PAUSE_MS = 6000;
+const MANUAL_PAUSE_MS = 4000;
 const ease = [0.22, 1, 0.36, 1] as const;
 const liftSpring = { type: "spring", stiffness: 170, damping: 22, mass: 0.9 } as const;
 
