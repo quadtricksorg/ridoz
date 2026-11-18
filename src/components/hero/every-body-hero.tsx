@@ -87,16 +87,26 @@ const SLIDES: Slide[] = [
   },
 ];
 
+/*
+ * The headline is baked into the artwork, so the frame is placed so that its top
+ * edge always lands just below the fixed navbar (bottom ≈ 82px), whatever the
+ * zoom level / viewport size:
+ *  --clear  y where the headline may start (navbar bottom + gap)
+ *  --vh     section height (the section has min-height 520px)
+ * Headline top as a fraction of the frame height, *after* the 1.035 Ken-Burns
+ * zoom around the centre: wide ≈ 0.045 (men's, the higher of the two), tall ≈ 0.21.
+ */
 const CSS = `
 .eb-frame{position:absolute;left:50%;aspect-ratio:1672/941;
-  --ih:max(calc((100svh - 156px) / 0.81),320px);height:var(--ih);
-  top:calc(98px - 0.075 * var(--ih));transform:translateX(-50%);
+  --clear:96px;--vh:max(100svh,520px);
+  --ih:max(calc((var(--vh) - 154px) / 0.848),320px);height:var(--ih);
+  top:calc(var(--clear) - 0.045 * var(--ih));transform:translateX(-50%);
   -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%);
   mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%)}
 .eb-tall-only{display:none}
 @media ${TALL}{
-  .eb-frame{aspect-ratio:941/1672;--ih:max(100svh,calc(100vw * 1672 / 941));
-    top:min(0px,calc(100svh - 92px - 0.828 * var(--ih)))}
+  .eb-frame{aspect-ratio:941/1672;--ih:max(var(--vh),calc(100vw * 1672 / 941));
+    top:max(calc(var(--clear) - 0.21 * var(--ih)),min(0px,calc(var(--vh) - 92px - 0.828 * var(--ih))))}
   .eb-wide-only{display:none}.eb-tall-only{display:block}
 }
 .eb-zoom{transition:transform 7.5s linear;transform:scale(1)}
