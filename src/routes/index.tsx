@@ -146,7 +146,9 @@ function Header() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
   });
-  const links = ["Drop", "Designs", "Shop", "Reviews", "Clients", "Contact"];
+  const links = ["Drop", "Designs", "Shop", "Clients", "Contact"];
+  // Visible menu text; the keys above double as section ids (#drop, #designs, …).
+  const navLabel = (l: string) => (l === "Drop" ? "Home" : l);
   const [activeSection, setActiveSection] = useState("Drop");
 
   useEffect(() => {
@@ -232,7 +234,7 @@ function Header() {
                 className={`cursor-pointer text-sm font-medium transition-colors duration-200 ${
                   activeSection === l ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
-                label={l}
+                label={navLabel(l)}
                 staggerDuration={0.025}
                 transition={{ duration: 0.6, type: "spring" }}
               />
@@ -271,7 +273,7 @@ function Header() {
                       : "font-medium text-muted-foreground hover:text-foreground active:text-foreground"
                   }`}
                 >
-                    <span>{l}</span>
+                    <span>{navLabel(l)}</span>
                     {activeSection === l && (
                       <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                     )}
