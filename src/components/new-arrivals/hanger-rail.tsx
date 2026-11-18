@@ -140,34 +140,135 @@ const extraFor = (g: Geo, active: number) => {
   return w / 2 + w * 0.06 + g.slot * 0.8 + g.gapBase - g.slot / 2;
 };
 
+/* ── Clip anchors: where each photo's fabric actually starts ─────────────── */
+
+/**
+ * Clip positions as fractions of the photo (x of width, y of height). Photos have a
+ * curved waistband / narrow straps, so the fabric under each clip starts lower than
+ * the image's top edge. Storing fractions keeps the clips attached at every zoom
+ * level and screen size, because they scale with the drawn garment.
+ */
+type ClipAnchor = { lx: number; ly: number; rx: number; ry: number };
+
+const NOMINAL_INSET = { bra: 0.16, clip: 0.05 } as const;
+const anchorCache = new Map<string, ClipAnchor | null>();
+let sampleCanvas: HTMLCanvasElement | null = null;
+
+/** One-off, ~96px-wide alpha scan of a loaded photo (≈ sub-millisecond, cached per image). */
+function measureClipAnchor(img: HTMLImageElement, kind: "clip" | "bra"): ClipAnchor | null {
+  try {
+    const W = 96;
+    const H = Math.max(1, Math.round((W * img.naturalHeight) / img.naturalWidth));
+    sampleCanvas ??= document.createElement("canvas");
+    sampleCanvas.width = W;
+    sampleCanvas.height = H;
+    const ctx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+    const data = ctx.getImageData(0, 0, W, H).data;
+    const maxY = Math.floor(H * 0.35); // a clip never reaches further down than this
+    const topAt = (x: number) => {
+      for (let y = 0; y < maxY; y++) if (data[(y * W + x) * 4 + 3]! > 140) return y;
+      return Infinity;
+    };
+    // Search a window around the nominal clip position for the highest fabric edge
+    // (the strap on a bra, the waistband's high point near the sides on briefs).
+    const nominal = NOMINAL_INSET[kind];
+    const from = Math.max(0, Math.round(W * (nominal - 0.04)));
+    const to = Math.round(W * (nominal + 0.16));
+    const scan = (col: (i: number) => number) => {
+      let best = { x: -1, y: Infinity };
+      for (let i = from; i <= to; i++) {
+        const x = col(i);
+        const y = topAt(x);
+        if (y < best.y) best = { x, y };
+      }
+      return best;
+    };
+    const l = scan((i) => i);
+    const r = scan((i) => W - 1 - i);
+    if (!Number.isFinite(l.y) || !Number.isFinite(r.y)) return null;
+    return { lx: (l.x + 0.5) / W, ly: l.y / H, rx: (r.x + 0.5) / W, ry: r.y / H };
+  } catch {
+    return null; // e.g. a cross-origin image taints the canvas → keep the default clips
+  }
+}
+
+const runWhenIdle = (fn: () => void) =>
+  typeof window !== "undefined" && "requestIdleCallback" in window
+    ? window.requestIdleCallback(fn, { timeout: 600 })
+    : window.setTimeout(fn, 60);
+
+/** Clip anchor for a garment photo, measured once after the photo has loaded. */
+function useClipAnchor(src: string, kind: "clip" | "bra") {
+  const [anchor, setAnchor] = useState<ClipAnchor | null>(() => anchorCache.get(src) ?? null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const measure = useCallback(() => {
+    if (anchorCache.has(src)) {
+      setAnchor(anchorCache.get(src) ?? null);
+      return;
+    }
+    runWhenIdle(() => {
+      const img = imgRef.current;
+      if (!img || !img.naturalWidth) return;
+      const a = measureClipAnchor(img, kind);
+      anchorCache.set(src, a);
+      setAnchor(a);
+    });
+  }, [src, kind]);
+  // Already loaded (cache / hydration) → onLoad may never fire.
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth) measure();
+  }, [measure]);
+  return { anchor, imgRef, onLoad: measure };
+}
+
 /* ── Hanger artwork ──────────────────────────────────────────────────────── */
 
-function Hanger({ w, h, kind }: { w: number; h: number; kind: "clip" | "bra" }) {
+function Hanger({
+  w,
+  h,
+  garmentH,
+  kind,
+  anchor,
+}: {
+  w: number;
+  h: number; // hanger height; the garment photo starts at y = h
+  garmentH: number; // drawn photo height
+  kind: "clip" | "bra";
+  anchor: ClipAnchor | null;
+}) {
   const cx = w / 2;
   const barY = h * 0.6;
   const hookR = Math.min(h * 0.17, 10);
   const hook = `M${cx} ${barY} V${hookR * 2.1} C${cx} ${hookR * 0.2} ${cx + hookR * 1.9} ${hookR * 0.2} ${cx + hookR * 1.9} ${hookR * 1.5} C${cx + hookR * 1.9} ${hookR * 2.3} ${cx + hookR * 1.2} ${hookR * 2.6} ${cx + hookR * 0.7} ${hookR * 2.4}`;
-  const inset = kind === "bra" ? w * 0.16 : w * 0.05;
   const clipW = Math.max(6, w * 0.035);
-  const clips = [inset, w - inset];
+  // Clips bite slightly into the fabric so they read as gripping it at any size.
+  const bite = clamp(garmentH * 0.02, 3, 8);
+  const inset = w * NOMINAL_INSET[kind];
+  const clips = anchor
+    ? [
+        { x: anchor.lx * w, bottom: h + anchor.ly * garmentH + bite },
+        { x: anchor.rx * w, bottom: h + anchor.ry * garmentH + bite },
+      ]
+    : [
+        { x: inset, bottom: h + 4 },
+        { x: w - inset, bottom: h + 4 },
+      ];
+  const barL = clips[0]!.x - clipW * 0.9;
+  const barR = clips[1]!.x + clipW * 0.9;
   return (
     <svg aria-hidden width={w} height={h} className="absolute left-0 top-0 overflow-visible">
       <path d={hook} fill="none" stroke="url(#hr-brass)" strokeWidth={2.4} strokeLinecap="round" />
-      <rect
-        x={inset - clipW * 0.9}
-        y={barY - 3}
-        width={w - 2 * inset + clipW * 1.8}
-        height={6}
-        rx={3}
-        fill="#2b1b20"
-      />
-      {clips.map((x) => (
-        <g key={x}>
+      <rect x={barL} y={barY - 3} width={barR - barL} height={6} rx={3} fill="#2b1b20" />
+      {clips.map(({ x, bottom }, i) => (
+        <g key={i}>
           <rect
             x={x - clipW / 2}
             y={barY}
             width={clipW}
-            height={h - barY + 4}
+            height={bottom - barY}
             rx={2}
             fill="#3a272d"
           />
@@ -225,6 +326,7 @@ const HangerItem = memo(function HangerItem({
 }: ItemProps) {
   const isActive = d === 0;
   const kind = product.category === "bra" ? "bra" : "clip";
+  const { anchor, imgRef, onLoad } = useClipAnchor(product.image, kind);
 
   // Position spring → velocity → pendulum sway (garment trails the rail's motion).
   const target = useMotionValue(x);
@@ -303,6 +405,8 @@ const HangerItem = memo(function HangerItem({
             transition={{ type: "spring", stiffness: 120, damping: 19, mass: 0.9 }}
           >
             <img
+              ref={imgRef}
+              onLoad={onLoad}
               src={product.image}
               srcSet={product.srcSet}
               sizes={`${Math.ceil(w * focus)}px`}
@@ -315,7 +419,7 @@ const HangerItem = memo(function HangerItem({
               className="pointer-events-none absolute left-0 max-w-none select-none"
               style={{ top: garmentTop, width: w, height: h }}
             />
-            <Hanger w={w} h={hangerH} kind={kind} />
+            <Hanger w={w} h={hangerH} garmentH={h} kind={kind} anchor={anchor} />
           </motion.div>
         </motion.div>
       </motion.div>
