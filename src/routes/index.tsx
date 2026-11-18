@@ -15,6 +15,7 @@ import {
 } from "framer-motion";
 import { Phone, Menu, X, ArrowUpRight, Instagram, Mail, MapPin, Wind, Feather, ShieldCheck } from "lucide-react";
 import { Magnet } from "@/components/ui/magnetic";
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { RandomLetterSwap } from "@/components/ui/random-letter-swap";
 import { productById } from "@/data/products";
@@ -88,7 +89,7 @@ function openGmail(e: React.MouseEvent<HTMLAnchorElement>) {
 }
 const WHATSAPP_NUMBER = PHONE.replace(/\D/g, "");
 const WHATSAPP_ENQUIRY_MESSAGE =
-  "Hi, I'm interested in your innerwear products. Could you please share details about sample availability, pricing, and the process for obtaining samples? Looking forward to hearing from you.";
+  "Hi, I'm interested in your innerwear products. Could you please share details.";
 const WHATSAPP_ENQUIRY_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_ENQUIRY_MESSAGE)}`;
 const trunk = productById("trunk-maroon");
 const reviews = [
@@ -222,7 +223,7 @@ function Header() {
             RIDOZ
           </span>
         </a>
-        <nav aria-label="Primary" className="hidden gap-8 text-sm font-medium md:flex">
+        <nav aria-label="Primary" className="hidden gap-5 text-sm font-medium md:flex lg:gap-8">
           {links.map((l) => (
             <a
               key={l}
@@ -246,7 +247,10 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Magnet className="hidden sm:inline-flex" strength={0.25}>
-            <a href={WHATSAPP_ENQUIRY_URL} target="_blank" rel="noopener noreferrer" className="btn-sweep inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors duration-300 hover:text-accent-foreground">Enquiry</a>
+            <a href={WHATSAPP_ENQUIRY_URL} target="_blank" rel="noopener noreferrer" title="Opens WhatsApp" className="btn-sweep inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors duration-300 hover:text-accent-foreground">
+              <WhatsAppIcon className="h-[18px] w-[18px] shrink-0" />
+              Chat with us
+            </a>
           </Magnet>
           <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full md:hidden">{open ? <X /> : <Menu />}</button>
         </div>
@@ -284,9 +288,11 @@ function Header() {
               href={WHATSAPP_ENQUIRY_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 flex min-h-12 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm transition-opacity active:opacity-90"
+              title="Opens WhatsApp"
+              className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground shadow-sm transition-opacity active:opacity-90"
             >
-              Enquiry
+              <WhatsAppIcon className="h-[18px] w-[18px] shrink-0" />
+              Chat with us
             </a>
           </motion.nav>
         )}
@@ -403,16 +409,6 @@ function Reviews() {
         <StaggerTestimonials testimonials={reviews.map((r) => ({ testimonial: r.q, by: `${r.n}, ${r.t}` }))} />
       </Reveal>
     </section>
-  );
-}
-
-/** WhatsApp glyph (lucide has no brand icons): chat bubble with a handset. */
-function WhatsAppIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M3.5 20.5 4.8 16.7A8.5 8.5 0 1 1 8 19.6Z" />
-      <path d="M9.1 8.6c.2-.5.6-.6.9-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.3 0 .5-.1.7l-.5.6c-.1.2-.1.4 0 .6.5.9 1.3 1.7 2.3 2.2.2.1.4.1.6-.1l.6-.6c.2-.2.4-.2.7-.1l1.5.7c.3.1.4.3.4.6v.4c0 .4-.2.8-.6 1-.5.3-1.2.5-1.9.3-2.6-.7-4.6-2.6-5.5-5.1-.2-.7 0-1.4.4-2.2Z" fill="currentColor" stroke="none" />
-    </svg>
   );
 }
 
