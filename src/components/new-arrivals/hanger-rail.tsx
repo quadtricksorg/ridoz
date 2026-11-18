@@ -47,10 +47,10 @@ import { FEATURES_BY_PRODUCT, FeatureRow } from "@/components/showcase/showcase-
  * velocity drives a pendulum sway; side view = rotateY(±80°), front view = 0.
  */
 
-const DWELL_MS = 1000; // front view held for 1s …
+const DWELL_MS = 700; // front view held for 0.7s …
 const TURN_MS = 650; // … plus the turn / slide transition
 const STEP_MS = DWELL_MS + TURN_MS;
-const RESUME_MS = 4500; // idle time after manual input before autoplay resumes
+const RESUME_MS = 3000; // idle time after manual input before autoplay resumes
 const GOTO_HOLD_MS = 9000; // a garment opened from another section stays in front this long
 const HOVER_INTENT_MS = 90; // pointer must rest on a garment this long to preview it
 const HOVER_RELEASE_MS = 220; // grace period before a preview ends (no flicker at edges)

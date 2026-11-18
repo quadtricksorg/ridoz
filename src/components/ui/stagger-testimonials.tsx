@@ -36,7 +36,7 @@ export const StaggerTestimonials: React.FC<{ testimonials: Testimonial[]; classN
 
   useEffect(() => {
     if (paused || reduce || count < 2) return;
-    const t = setInterval(() => setActive((a) => (a + 1) % count), 6000);
+    const t = setInterval(() => setActive((a) => (a + 1) % count), 4000);
     return () => clearInterval(t);
   }, [paused, reduce, count, active]);
 

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { showcaseSlides, showcaseProducts, showcaseProductsMap } from "@/data/showcase-slides";
 import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
@@ -65,7 +65,8 @@ describe("ProductShowcaseSlider Data & Component", () => {
 
     expect(prevBtn).toBeInTheDocument();
     expect(nextBtn).toBeInTheDocument();
-    expect(prevBtn).toBeDisabled(); // first slide has disabled prev
+    // Never disabled: past either end the slider moves on to the neighbouring product
+    expect(prevBtn).not.toBeDisabled();
     expect(nextBtn).not.toBeDisabled();
   });
 
@@ -100,30 +101,33 @@ describe("ProductShowcaseSlider Data & Component", () => {
     expect(screen.getAllByText(/breathable/i).length).toBeGreaterThan(0);
   });
 
-  it("handles keyboard navigation with ArrowRight, ArrowLeft, ArrowDown, ArrowUp", () => {
+  it("handles keyboard navigation with ArrowRight / ArrowLeft and leaves ArrowDown / ArrowUp to page scroll", () => {
     render(<ProductShowcaseSlider />);
 
     const carousel = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
     carousel.focus();
-
-    // ArrowDown / ArrowRight advances
-    fireEvent.keyDown(carousel, { key: "ArrowDown" });
     const dots = screen.getAllByRole("tab");
+
+    fireEvent.keyDown(carousel, { key: "ArrowDown" });
+    expect(dots[0]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(carousel, { key: "ArrowRight" });
     expect(dots[1]).toHaveAttribute("aria-selected", "true");
 
-    // ArrowUp / ArrowLeft goes back
-    fireEvent.keyDown(carousel, { key: "ArrowUp" });
+    fireEvent.keyDown(carousel, { key: "ArrowLeft" });
     expect(dots[0]).toHaveAttribute("aria-selected", "true");
   });
 
-  it("handles vertical wheel scroll to advance and reverse slides", () => {
+  it("ignores vertical wheel scroll but advances on a horizontal trackpad swipe", () => {
     render(<ProductShowcaseSlider />);
 
     const carousel = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
-
-    // Scroll down (deltaY > 0)
-    fireEvent.wheel(carousel, { deltaY: 100 });
     const dots = screen.getAllByRole("tab");
+
+    fireEvent.wheel(carousel, { deltaY: 100 });
+    expect(dots[0]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.wheel(carousel, { deltaX: 100 });
     expect(dots[1]).toHaveAttribute("aria-selected", "true");
   });
   it("defines 4 innerwear products with valid configs and slides", () => {
@@ -163,28 +167,48 @@ describe("ProductShowcaseSlider Data & Component", () => {
     expect(live).toBeInTheDocument();
   });
 
-  it("switches color slide on touch swipe gesture (touchstart + touchend)", () => {
+  it("moves on to the next product after the last colour instead of rewinding", async () => {
+    render(<ProductShowcaseSlider />);
+    const nextBtn = screen.getByRole("button", { name: /next design slide/i });
+    const braCount = showcaseProductsMap.bra.slides.length;
+
+    fireEvent.click(screen.getAllByRole("tab")[braCount - 1]!);
+    fireEvent.click(nextBtn);
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("radio", { name: /boxer/i })[0]).toHaveAttribute("aria-checked", "true"),
+      { timeout: 3000 },
+    );
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("goes back to the previous product's last colour from the first colour (looping)", async () => {
+    render(<ProductShowcaseSlider />);
+    fireEvent.click(screen.getByRole("button", { name: /previous design slide/i }));
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("radio", { name: /brief/i })[0]).toHaveAttribute("aria-checked", "true"),
+      { timeout: 3000 },
+    );
+    const dots = screen.getAllByRole("tab");
+    expect(dots.length).toBe(showcaseProductsMap.brief.slides.length);
+    expect(dots[dots.length - 1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("switches colour on a horizontal touch swipe but not on a vertical one", () => {
     render(<ProductShowcaseSlider />);
     const slider = screen.getByRole("region", { name: /innerwear colorway showcase slider/i });
-
-    // Initial dot 0 is selected
     const dots = screen.getAllByRole("tab");
     expect(dots[0]).toHaveAttribute("aria-selected", "true");
 
-    // Simulate vertical swipe UP (finger moves from y=300 to y=100) -> advance to next slide
-    fireEvent.touchStart(slider, {
-      touches: [{ clientX: 100, clientY: 300 }],
-    });
-    fireEvent.touchMove(slider, {
-      touches: [{ clientX: 100, clientY: 100 }],
-      cancelable: true,
-    });
-    fireEvent.touchEnd(slider, {
-      changedTouches: [{ clientX: 100, clientY: 100 }],
-    });
+    // Vertical swipe: plain page scroll, colour unchanged
+    fireEvent.touchStart(slider, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchEnd(slider, { changedTouches: [{ clientX: 100, clientY: 100 }] });
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
 
-    // Dot 1 should now be selected
-    const updatedDots = screen.getAllByRole("tab");
-    expect(updatedDots[1]).toHaveAttribute("aria-selected", "true");
+    // Horizontal swipe LEFT -> next colour
+    fireEvent.touchStart(slider, { touches: [{ clientX: 300, clientY: 200 }] });
+    fireEvent.touchEnd(slider, { changedTouches: [{ clientX: 120, clientY: 210 }] });
+    expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "true");
   });
 });
