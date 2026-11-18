@@ -189,7 +189,11 @@ function measureClipAnchor(img: HTMLImageElement, kind: "clip" | "bra"): ClipAnc
     const l = scan((i) => i);
     const r = scan((i) => W - 1 - i);
     if (!Number.isFinite(l.y) || !Number.isFinite(r.y)) return null;
-    return { lx: (l.x + 0.5) / W, ly: l.y / H, rx: (r.x + 0.5) / W, ry: r.y / H };
+    // Garments are symmetric, but on a near-flat waistband the "highest" column is
+    // picked by noise and lands at a different inset on each side — the bar then sits
+    // off-centre under the hook. Mirror both clips to the average inset.
+    const inset = ((l.x + 0.5) / W + (W - 0.5 - r.x) / W) / 2;
+    return { lx: inset, ly: l.y / H, rx: 1 - inset, ry: r.y / H };
   } catch {
     return null; // e.g. a cross-origin image taints the canvas → keep the default clips
   }
