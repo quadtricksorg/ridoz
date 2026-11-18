@@ -648,9 +648,12 @@ export function ProductShowcaseSlider() {
   // Sync scroll spring -> unified progress ONLY for desktop mousewheel/trackpad scroll depth.
   // On touch devices / during touch scroll: progress is NOT based on scroll depth;
   // it is switched cleanly step-by-step on touch start & stop gestures.
+  const isMouseDraggingRef = useRef(false);
+  const [isMouseDragging, setIsMouseDragging] = useState(false);
+
   useEffect(() => {
     const unsub = springProgress.on("change", (latest) => {
-      if (isTouchModeRef.current || isTouchNavigatingRef.current) return;
+      if (isTouchModeRef.current || isTouchNavigatingRef.current || isMouseDraggingRef.current) return;
       if (Date.now() > isProgrammaticUntilRef.current) {
         progress.set(latest);
       }
@@ -969,6 +972,157 @@ export function ProductShowcaseSlider() {
     };
   }, [goToSlide, totalSlides]);
 
+  // 3b. MOUSE DRAG + TRACKPAD SWIPE COLOUR NAVIGATION (NON-TOUCH DEVICES):
+  // - Click-and-drag left/right on the product display scrubs live between colours
+  //   and settles on the next / previous colour on release (one step per drag).
+  // - Two-finger horizontal trackpad swipes (and shift+wheel) step exactly one colour per gesture.
+  // - Only acts while the section is pinned, so the page never jumps.
+  // - Buttons, links, swatches and dots keep working as plain clicks.
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const DRAG_START_PX = 6;
+    const DRAG_COMMIT_PX = 50;
+    const isInteractive = (el: EventTarget | null) =>
+      !!(el as HTMLElement | null)?.closest?.("button, a, input, select, textarea, [role='radio'], [role='tab']");
+    const isPinnedNow = () => {
+      const el = trackRef.current;
+      if (!el) return false;
+      if (!el.offsetHeight) return true; // test env (no layout)
+      const rect = el.getBoundingClientRect();
+      return rect.top <= 25 && rect.bottom >= window.innerHeight - 25;
+    };
+
+    let pointerId: number | null = null;
+    let startX = 0;
+    let startY = 0;
+    let startIndex = 0;
+    let lastX = 0;
+    let lastT = 0;
+    let velocity = 0; // px per ms
+    let dragging = false;
+    let suppressClick = false;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return; // touch handled by the touch handlers above
+      if (e.button !== 0 || pointerId !== null) return;
+      if (isInteractive(e.target) || !isPinnedNow()) return;
+      pointerId = e.pointerId;
+      startX = lastX = e.clientX;
+      startY = e.clientY;
+      lastT = performance.now();
+      velocity = 0;
+      startIndex = currentIndexRef.current;
+      dragging = false;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!dragging) {
+        if (Math.abs(dx) < DRAG_START_PX || Math.abs(dx) < Math.abs(dy)) return;
+        dragging = true;
+        isMouseDraggingRef.current = true;
+        setIsMouseDragging(true);
+        setHasInteracted(true);
+        activeAnimationRef.current?.stop();
+        try {
+          slider.setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+      const now = performance.now();
+      const dt = now - lastT;
+      if (dt > 0) velocity = (e.clientX - lastX) / dt;
+      lastX = e.clientX;
+      lastT = now;
+
+      // Live scrub: dragging ~half the section width moves one full colour.
+      const width = slider.clientWidth || window.innerWidth;
+      const raw = startIndex - dx / (width * 0.5);
+      const lo = Math.max(0, startIndex - 1);
+      const hi = Math.min(totalSlides - 1, startIndex + 1);
+      progress.set(Math.max(lo, Math.min(hi, raw)));
+    };
+
+    const endDrag = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      pointerId = null;
+      try {
+        if (slider.hasPointerCapture(e.pointerId)) slider.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (!dragging) return;
+      dragging = false;
+      isMouseDraggingRef.current = false;
+      setIsMouseDragging(false);
+      suppressClick = true;
+      window.setTimeout(() => (suppressClick = false), 0);
+
+      const dx = e.clientX - startX;
+      const flick = Math.abs(velocity) > 0.5;
+      let target = startIndex;
+      if (dx <= -DRAG_COMMIT_PX || (flick && velocity < 0 && dx < 0)) target = startIndex + 1;
+      else if (dx >= DRAG_COMMIT_PX || (flick && velocity > 0 && dx > 0)) target = startIndex - 1;
+      goToSlide(target);
+    };
+
+    // Swallow the click that follows a drag so nothing underneath is activated.
+    const onClickCapture = (e: MouseEvent) => {
+      if (suppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        suppressClick = false;
+      }
+    };
+
+    // Horizontal trackpad swipe: one colour per gesture (inertia is ignored until it settles).
+    let wheelAcc = 0;
+    let wheelLocked = false;
+    let wheelIdle: ReturnType<typeof setTimeout> | null = null;
+    const onWheel = (e: WheelEvent) => {
+      const dx = e.deltaX !== 0 ? e.deltaX : e.shiftKey ? e.deltaY : 0;
+      if (Math.abs(dx) <= Math.abs(e.shiftKey ? 0 : e.deltaY)) return;
+      if (!isPinnedNow()) return;
+      if (e.cancelable) e.preventDefault(); // stop browser back/forward swipe
+      if (wheelIdle) clearTimeout(wheelIdle);
+      wheelIdle = setTimeout(() => {
+        wheelLocked = false;
+        wheelAcc = 0;
+      }, 220);
+      if (wheelLocked) return;
+      wheelAcc += dx;
+      if (Math.abs(wheelAcc) < 40) return;
+      const current = currentIndexRef.current;
+      const target = wheelAcc > 0 ? current + 1 : current - 1;
+      wheelAcc = 0;
+      wheelLocked = true;
+      if (target >= 0 && target <= totalSlides - 1) goToSlide(target);
+    };
+
+    slider.addEventListener("pointerdown", onPointerDown);
+    slider.addEventListener("pointermove", onPointerMove);
+    slider.addEventListener("pointerup", endDrag);
+    slider.addEventListener("pointercancel", endDrag);
+    slider.addEventListener("click", onClickCapture, true);
+    slider.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      if (wheelIdle) clearTimeout(wheelIdle);
+      isMouseDraggingRef.current = false;
+      slider.removeEventListener("pointerdown", onPointerDown);
+      slider.removeEventListener("pointermove", onPointerMove);
+      slider.removeEventListener("pointerup", endDrag);
+      slider.removeEventListener("pointercancel", endDrag);
+      slider.removeEventListener("click", onClickCapture, true);
+      slider.removeEventListener("wheel", onWheel);
+    };
+  }, [goToSlide, progress, totalSlides]);
+
   // 4. AUTOPLAY (colourways change on their own, like the 3-piece box section)
   // Runs only while the slider is pinned on screen, the tab is visible, motion is
   // allowed and the visitor has been idle for AUTOPLAY_IDLE_MS. Any wheel, touch,
@@ -1029,6 +1183,7 @@ export function ProductShowcaseSlider() {
         !document.hidden &&
         !isReducedMotion &&
         !isTouchNavigatingRef.current &&
+        !isMouseDraggingRef.current &&
         Date.now() - lastUserInputRef.current > AUTOPLAY_IDLE_MS;
       setAutoplayActive((prev) => (prev === eligible ? prev : eligible));
     };
@@ -1104,7 +1259,9 @@ export function ProductShowcaseSlider() {
         onWheel={handleWheel}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className={`sticky top-0 h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+          isMouseDragging ? "cursor-grabbing" : "[@media(hover:hover)_and_(pointer:fine)]:cursor-grab"
+        }`}
         style={
           {
             // Phone layout (< 640px): free area between the title and the bottom stack.
