@@ -32,6 +32,8 @@ type Anchor = {
   cy: number;
   bottom: number;
   size: number;
+  /** Size the halo and ring are drawn for: tall garments (vests) get the box a wide product fills. */
+  stageSize: number;
   secW: number;
   secH: number;
   stackTop: number | null; // top of the phone bottom stack (card + selector + CTA)
@@ -45,6 +47,8 @@ type Bounds = { top: number; bottom: number; left: number; right: number }; // 0
  * and cache it, so the podium sits under the garment, not under empty pixels.
  */
 const boundsCache = new Map<string, Bounds>();
+/** Width ÷ height of the wide product photos (bras, briefs, trunks, panties ≈ 1.25–1.5). */
+const TYPICAL_WIDE_RATIO = 1.4;
 function visibleBounds(img: HTMLImageElement): Bounds {
   const full = { top: 0, bottom: 1, left: 0, right: 1 };
   const key = img.currentSrc || img.src;
@@ -138,11 +142,23 @@ function useProductAnchor(
         // The stack's own entrance offset (translateY) is ignored by offsetTop.
         const stackTop = stack && stack.offsetHeight ? stack.offsetTop : null;
         const stackRight = stack && stack.offsetWidth ? stack.offsetLeft + stack.offsetWidth : null;
+        const size = Math.max(right - left, bottom - top);
+        // Wide products fill the image's max-width; a tall one stops at max-height and
+        // would get a smaller ring. Give it the ring of a typical wide product instead.
+        let stageSize = size;
+        if (bottom - top > right - left) {
+          const cs = getComputedStyle(img);
+          const maxW = parseFloat(cs.maxWidth) || Infinity;
+          const maxH = parseFloat(cs.maxHeight) || Infinity;
+          const wideBox = Math.min(maxW, maxH * TYPICAL_WIDE_RATIO);
+          if (Number.isFinite(wideBox)) stageSize = Math.max(size, wideBox);
+        }
         setAnchor({
           cx: (left + right) / 2 - s.left,
           cy: (top + bottom) / 2 - s.top,
           bottom: bottom - s.top,
-          size: Math.max(right - left, bottom - top),
+          size,
+          stageSize,
           secW: s.width,
           secH: s.height,
           stackTop,
@@ -236,8 +252,8 @@ export function ShowcaseStage({
 
   const mobile = (a?.secW ?? 1024) < 640;
   const tablet = !mobile && (a?.secW ?? 1024) < 1024;
-  const halo = a ? Math.min(a.size * 2.3, Math.max(a.secW, a.secH) * 0.95) : 0;
-  const ring = a ? a.size * 1.42 : 0;
+  const halo = a ? Math.min(a.stageSize * 2.3, Math.max(a.secW, a.secH) * 0.95) : 0;
+  const ring = a ? a.stageSize * 1.42 : 0;
   const ribbonW = a ? Math.min(a.secW * (mobile ? 1.25 : 1.05), 1500) : 0;
   const ribbonH = ribbonW / 3.2;
 
@@ -451,6 +467,12 @@ export const FEATURES_BY_PRODUCT: Record<ShowcaseProductType, Feature[]> = {
     { icon: icon.feather, label: ["Soft", "Touch"] },
     { icon: icon.breathable, label: ["Breathable", "Fabric"] },
     { icon: icon.waistband, label: ["Comfort", "Waistband"] },
+    { icon: icon.leaf, label: ["All-Day", "Comfort"] },
+  ],
+  vest: [
+    { icon: icon.feather, label: ["Lightweight", "Feel"] },
+    { icon: icon.breathable, label: ["Breathable", "Cotton"] },
+    { icon: icon.smooth, label: ["Smooth Under", "Shirts"] },
     { icon: icon.leaf, label: ["All-Day", "Comfort"] },
   ],
 };
