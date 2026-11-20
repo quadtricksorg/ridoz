@@ -184,6 +184,48 @@ html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
 
 @utility no-scrollbar { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
 
+/*
+ * Scroll reveal (see src/components/ui/use-reveal.ts). A section marked with useReveal()
+ * gets data-reveal="pending" once hydrated (only while it is off-screen), then "in" when it
+ * scrolls into view. Its [data-reveal-item] children play a one-off entrance:
+ *   data-reveal-item=""      rise + fade (default)
+ *   data-reveal-item="zoom"  settle from a slight zoom + fade (large stages / artwork)
+ *   data-reveal-item="left" / "right"  slide in from that side
+ * Stagger with style={{ "--reveal-delay": "120ms" }}.
+ * The keyframes use fill-mode "backwards" so, once played, the element's own transforms
+ * and transitions (hover, framer-motion) are untouched. Server HTML is always visible.
+ */
+[data-reveal="pending"] [data-reveal-item] { opacity: 0; }
+[data-reveal="in"] [data-reveal-item] {
+  animation: reveal-rise 0.95s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms) backwards;
+}
+[data-reveal="in"] [data-reveal-item="zoom"] {
+  animation-name: reveal-zoom;
+  animation-duration: 1.25s;
+}
+[data-reveal="in"] [data-reveal-item="left"] { animation-name: reveal-left; }
+[data-reveal="in"] [data-reveal-item="right"] { animation-name: reveal-right; }
+@keyframes reveal-rise { from { opacity: 0; transform: translate3d(0, 36px, 0); } }
+@keyframes reveal-zoom { from { opacity: 0; transform: scale(1.06); } }
+@keyframes reveal-left { from { opacity: 0; transform: translate3d(-48px, 0, 0); } }
+@keyframes reveal-right { from { opacity: 0; transform: translate3d(48px, 0, 0); } }
+
+/*
+ * First screen, on loads that play the intro logo: pure CSS timed to the intro's fade-out
+ * (1.7s, see intro-loader.tsx), so it runs from the server HTML without waiting for hydration.
+ * The hero artwork settles from a gentle zoom, then the navbar drops in and the dots rise.
+ */
+.hero-intro .hero-enter-slides { animation: hero-settle 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1.55s backwards; }
+.hero-intro .hero-enter-ui { animation: reveal-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 2.25s backwards; }
+.header-intro { animation: header-drop 0.9s cubic-bezier(0.22, 1, 0.36, 1) 2s backwards; }
+@keyframes hero-settle { from { transform: scale(1.08); } }
+@keyframes header-drop { from { opacity: 0; transform: translate3d(0, -28px, 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] [data-reveal-item] { opacity: 1 !important; animation: none !important; }
+  .hero-intro .hero-enter-slides, .hero-intro .hero-enter-ui, .header-intro { animation: none; }
+}
+
 /* Button hover: a fill sweeps up from the bottom edge. Set --btn-sweep to change its colour. */
 @utility btn-sweep {
   position: relative;

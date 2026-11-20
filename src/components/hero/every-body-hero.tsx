@@ -95,17 +95,24 @@ const SLIDES: Slide[] = [
  *  --vh     section height (the section has min-height 520px)
  * Headline top as a fraction of the frame height, *after* the 1.035 Ken-Burns
  * zoom around the centre: wide ≈ 0.045 (men's, the higher of the two), tall ≈ 0.21.
+ * The frame fades out on all four sides (the top fade ends just above the headline), so
+ * its edges never show as a hard line against the wall colour behind it.
  */
 const CSS = `
 .eb-frame{position:absolute;left:50%;aspect-ratio:1672/941;
   --clear:96px;--vh:max(100svh,520px);
   --ih:max(calc((var(--vh) - 154px) / 0.848),320px);height:var(--ih);
   top:calc(var(--clear) - 0.045 * var(--ih));transform:translateX(-50%);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%);
-  mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%)}
+  --fade-top:4%;--fade-bottom:90%;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%),
+    linear-gradient(180deg,transparent 0,#000 var(--fade-top),#000 var(--fade-bottom),transparent 100%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(90deg,transparent 0,#000 9%,#000 91%,transparent 100%),
+    linear-gradient(180deg,transparent 0,#000 var(--fade-top),#000 var(--fade-bottom),transparent 100%);
+  mask-composite:intersect}
 .eb-tall-only{display:none}
 @media ${TALL}{
-  .eb-frame{aspect-ratio:941/1672;--ih:max(var(--vh),calc(100vw * 1672 / 941));
+  .eb-frame{aspect-ratio:941/1672;--fade-top:12%;--fade-bottom:92%;--ih:max(var(--vh),calc(100vw * 1672 / 941));
     top:max(calc(var(--clear) - 0.21 * var(--ih)),min(0px,calc(var(--vh) - 92px - 0.828 * var(--ih))))}
   .eb-wide-only{display:none}.eb-tall-only{display:block}
 }
@@ -222,7 +229,11 @@ function SlideArt({ slide, first }: { slide: Slide; first: boolean }) {
   );
 }
 
-export function EveryBodyHero() {
+/**
+ * `intro`: this load plays the intro logo, so the hero plays its entrance as the logo fades
+ * (artwork settles from a gentle zoom, dots rise; CSS in styles.css).
+ */
+export function EveryBodyHero({ intro = false }: { intro?: boolean }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
   // Slide positions: -1 left (leaving), 0 on screen, 1 waiting on the right.
@@ -308,7 +319,7 @@ export function EveryBodyHero() {
       id="drop"
       aria-roledescription="carousel"
       aria-label="RIDOZ — innerwear for every body"
-      className="relative h-[100svh] min-h-[520px] overflow-hidden bg-[#f3bbbd] [touch-action:pan-y]"
+      className={`relative h-[100svh] min-h-[520px] overflow-hidden bg-[#f3bbbd] [touch-action:pan-y] ${intro ? "hero-intro" : ""}`}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={() => (swipe.current = null)}
@@ -316,6 +327,7 @@ export function EveryBodyHero() {
       <style>{CSS}</style>
       <h1 className="sr-only">RIDOZ innerwear — {slide.title}</h1>
 
+      <div className="hero-enter-slides absolute inset-0">
       {SLIDES.map((s, i) => (
         <div
           key={s.id}
@@ -334,6 +346,7 @@ export function EveryBodyHero() {
           <SlideArt slide={s} first={i === 0} />
         </div>
       ))}
+      </div>
 
       {/* Soft fade into the next section, so the pages flow instead of meeting at a hard edge */}
       <div
@@ -346,7 +359,7 @@ export function EveryBodyHero() {
       />
 
       {/* Slide dots */}
-      <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-5 sm:bottom-4">
+      <div className="hero-enter-ui absolute inset-x-0 bottom-3 z-10 flex justify-center px-5 sm:bottom-4">
         <div role="tablist" aria-label="Choose campaign" className="flex items-center gap-2">
           {SLIDES.map((s, i) => (
             <button

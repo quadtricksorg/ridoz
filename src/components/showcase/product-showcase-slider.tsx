@@ -23,6 +23,7 @@ import {
 import { FEATURES_BY_PRODUCT, FeatureRow, ShowcaseStage } from "@/components/showcase/showcase-stage-decor";
 import { LOOK_TO_RAIL, goToRail } from "@/lib/shop-links";
 import { productImageVariants } from "@/data/products";
+import { useReveal } from "@/components/ui/use-reveal";
 
 /** Autoplay: how long each colourway stays, and how long after the last user input it resumes. */
 const AUTOPLAY_MS = 2000;
@@ -545,6 +546,7 @@ export function ProductShowcaseSlider() {
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const sliderRef = useRef<HTMLDivElement>(null);
+  useReveal(sliderRef);
   const activeAnimationRef = useRef<AnimationPlaybackControls | null>(null);
   const currentIndexRef = useRef(0);
   currentIndexRef.current = currentIndex;
@@ -1002,6 +1004,8 @@ export function ProductShowcaseSlider() {
         {/* Same grain texture as Hero and other sections */}
         <div className="grain absolute inset-0 -z-10 opacity-60 pointer-events-none" />
 
+        {/* Layers 0–4 enter together (zoom-settle) the first time the slider scrolls into view */}
+        <div data-reveal-item="zoom" className="absolute inset-0">
         {/* 0. STAGE: colour halo, glow arc and podium behind the title and product */}
         <ShowcaseStage slides={activeSlides} currentIndex={currentIndex} />
 
@@ -1064,11 +1068,14 @@ export function ProductShowcaseSlider() {
             features={<FeatureRow features={FEATURES_BY_PRODUCT[selectedProduct]} color={slide.darkColor} />}
           />
         ))}
+        </div>
 
         {/* Navigation Arrows — phones: level with the product; larger screens: vertically centred */}
         <div className="pointer-events-none absolute inset-x-2 top-[var(--pc-m)] h-0 flex items-center justify-between z-[70] sm:inset-x-4 sm:top-0 sm:h-full lg:inset-x-8">
           <button
             type="button"
+            data-reveal-item="left"
+            style={{ "--reveal-delay": "350ms" } as React.CSSProperties}
             aria-label="Previous design slide"
             onClick={(e) => {
               e.stopPropagation();
@@ -1081,6 +1088,8 @@ export function ProductShowcaseSlider() {
 
           <button
             type="button"
+            data-reveal-item="right"
+            style={{ "--reveal-delay": "350ms" } as React.CSSProperties}
             aria-label="Next design slide"
             onClick={(e) => {
               e.stopPropagation();
@@ -1097,6 +1106,8 @@ export function ProductShowcaseSlider() {
         <div
           role="tablist"
           aria-label="Showcase slide navigation"
+          data-reveal-item=""
+          style={{ "--reveal-delay": "450ms" } as React.CSSProperties}
           className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 rounded-full border border-white/80 bg-[#fdf6f4]/95 px-4 py-2 shadow-[0_8px_24px_-12px_rgba(90,30,50,0.4)]"
         >
           {activeSlides.map((slide, idx) => {

@@ -142,7 +142,7 @@ function ScrollProgress() {
   return <motion.div aria-hidden style={{ scaleX }} className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-gold" />;
 }
 
-function Header() {
+function Header({ intro = false }: { intro?: boolean }) {
   const [open, setOpen] = useState(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("menu");
@@ -204,7 +204,8 @@ function Header() {
     setOpen(false);
   };
   return (
-    <header className="fixed inset-x-0 top-4 z-50 px-4">
+    // header-intro: drops in as the intro logo fades (CSS in styles.css)
+    <header className={`fixed inset-x-0 top-4 z-50 px-4 ${intro ? "header-intro" : ""}`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-[#a51538]/10 bg-gradient-to-r from-[#fdf5f2]/85 via-[#f9ebe7]/85 to-[#f5e1dc]/85 px-5 py-2.5 shadow-[0_8px_30px_-12px_rgba(120,30,50,0.25)] backdrop-blur-xl">
         <a
           href="#drop"
@@ -548,6 +549,9 @@ function Index() {
     }
   });
 
+  // Fixed for the page's lifetime, so the entrance isn't cut short when the intro unmounts.
+  const [intro] = useState(loading);
+
   useEffect(() => {
     document.body.style.overflow = loading ? "hidden" : "";
     return () => {
@@ -559,9 +563,9 @@ function Index() {
     <MotionConfig reducedMotion="user">
       {loading && <IntroLoader key="ridoz-intro" onComplete={() => setLoading(false)} />}
       <ScrollProgress />
-      <Header />
+      <Header intro={intro} />
       <main className="overflow-x-clip">
-        <EveryBodyHero />
+        <EveryBodyHero intro={intro} />
         <ProductShowcaseSlider />
         <TrioBoxShowcase />
         <Marquee />
