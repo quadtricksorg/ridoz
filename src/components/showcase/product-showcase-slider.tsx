@@ -31,6 +31,29 @@ const AUTOPLAY_IDLE_MS = 2500;
 /** Fully transparent layers are hidden so they drop out of compositing while scrolling. */
 const hiddenWhenClear = (o: number) => (o <= 0.001 ? "hidden" : "visible");
 
+/**
+ * Shared transition curves. Every layer of a slide lives in the window |progress − index| ≤ 0.5:
+ * the outgoing slide eases out over the first half of a step, the incoming one eases in over the
+ * second half. All curves have zero velocity at both ends, so there are no jolts or overshoots.
+ */
+const STEP_WINDOW = 0.5;
+/** Slide-to-slide timing: gentle start, long soft landing. */
+const SLIDE_EASE = [0.45, 0.05, 0.25, 1] as const;
+const SLIDE_DURATION = 0.95;
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+/** 0 at rest → 1 at the edge of the window. */
+const phase = (p: number, index: number) => clamp01(Math.abs(p - index) / STEP_WINDOW);
+/** Opacity: fully visible at rest, smoothly gone by the half-step. */
+const fadeAt = (p: number, index: number, reduced: boolean) =>
+  reduced ? (Math.abs(p - index) < 0.5 ? 1 : 0) : 1 - smoothstep(phase(p, index));
+/** Signed offset: slow to start leaving / slow to settle when arriving. */
+const driftAt = (p: number, index: number, distance: number, reduced: boolean) => {
+  if (reduced) return 0;
+  const t = phase(p, index);
+  return Math.sign(p - index) * distance * t * t * t;
+};
+
 // Lightweight, delicate botanical small flower designs for the moving accent layer
 function DelicateBlossomFlower({ className, color }: { className?: string; color: string }) {
   return (
@@ -115,29 +138,9 @@ function SlideTitleBounceLayer({
   progress: MotionValue<number>;
   isReducedMotion: boolean;
 }) {
-  // Fast entrance from left with overshoot bounce settling
-  const x = useTransform(progress, (p) => {
-    if (isReducedMotion) return "0px";
-    const d = p - index;
-    const sign = Math.sign(d);
-    const u = Math.abs(d);
-    if (u >= 1) return `${sign * 280}px`;
-    // Underdamped spring curve: forward overshoot before settling to 0
-    const wave = Math.sin(Math.PI * Math.min(1, u / 0.35)) * Math.pow(1 - u, 1.4);
-    const base = 280 * Math.pow(u, 1.25);
-    const xVal = sign * (base - 55 * wave);
-    return `${xVal.toFixed(1)}px`;
-  });
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    const absD = Math.abs(p - index);
-    if (absD >= 0.45) return 0;
-    if (absD <= 0.25) return 1;
-    return (0.45 - absD) / (0.45 - 0.25);
-  });
+  // Glides in from the left and settles softly (no overshoot)
+  const x = useTransform(progress, (p) => driftAt(p, index, 140, isReducedMotion));
+  const opacity = useTransform(progress, (p) => fadeAt(p, index, isReducedMotion));
 
   return (
     <motion.div
@@ -161,22 +164,15 @@ function SlideTitleBounceLayer({
 
 /**
  * Product pose for a slide at signed distance d = progress − index.
- * The outgoing product drifts left and fades out completely in the first 40% of a
- * transition; the incoming one only starts to appear after the halfway point and
- * settles in from the right — so two products are never on screen together.
+ * The outgoing product drifts left and fades out over the first half of a step; the
+ * incoming one fades in from the right over the second half — so two products are
+ * never on screen together, and every curve starts and ends at rest.
  */
-const EXIT_END = 0.4;
-const ENTER_SPAN = 0.45;
 function productPose(p: number, index: number, reduced: boolean) {
-  const d = p - index;
-  if (reduced) return { o: Math.abs(d) < 0.5 ? 1 : 0, x: 0, s: 1 };
-  if (d >= 0) {
-    const t = Math.min(1, d / EXIT_END); // 0 → 1 while leaving
-    return { o: 1 - t, x: -90 * t * t, s: 1 - 0.07 * t };
-  }
-  const u = Math.min(1, -d / ENTER_SPAN); // 1 → 0 while arriving
-  const e = u * u; // ease-out arrival
-  return { o: 1 - u, x: 90 * e, s: 1 - 0.07 * e };
+  if (reduced) return { o: Math.abs(p - index) < 0.5 ? 1 : 0, x: 0, s: 1 };
+  const t = phase(p, index);
+  const e = smoothstep(t);
+  return { o: 1 - e, x: -driftAt(p, index, 70, false), s: 1 - 0.05 * e };
 }
 
 /**
@@ -253,18 +249,21 @@ function ProductSelector({
   selectedProduct,
   currentSlide,
   onSelectProduct,
+  timer,
   className = "",
 }: {
   selectedProduct: ShowcaseProductType;
   currentSlide?: ShowcaseSlide;
   onSelectProduct: (p: ShowcaseProductType) => void;
+  /** Autoplay countdown ring on the selected swatch (only for the slide on screen). */
+  timer?: { autoplay: boolean; key: string } | undefined;
   className?: string;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label="Choose innerwear product"
-      className={`inline-flex items-center gap-2.5 rounded-full border border-white/80 bg-[#fdf6f4]/95 px-2.5 py-1.5 shadow-[0_10px_30px_-16px_rgba(90,30,50,0.45)] ${className}`}
+      className={`inline-flex items-center gap-3 rounded-full border border-white/80 bg-[#fdf6f4]/95 px-3 py-2 shadow-[0_10px_30px_-16px_rgba(90,30,50,0.45)] ${className}`}
     >
       {showcaseProducts.map((p) => {
         const isSelected = selectedProduct === p.id;
@@ -275,8 +274,32 @@ function ProductSelector({
         const ringColor = isSelected && currentSlide?.darkColor ? currentSlide.darkColor : "var(--primary)";
 
         return (
+          <span key={p.id} className="relative inline-flex shrink-0">
+          {isSelected && (
+            // Same countdown ring as the 3-piece box swatches: fills while autoplay counts
+            // down to the next colour, and stays full while autoplay is paused.
+            <svg
+              viewBox="0 0 48 48"
+              aria-hidden
+              className="pointer-events-none absolute -inset-[6px] h-[calc(100%+12px)] w-[calc(100%+12px)] -rotate-90 lg:-inset-[7px] lg:h-[calc(100%+14px)] lg:w-[calc(100%+14px)]"
+            >
+              <circle cx="24" cy="24" r="22.5" fill="none" stroke="#2a1216" strokeOpacity={0.12} strokeWidth="1.5" />
+              <motion.circle
+                key={timer ? `ring-${timer.key}-${timer.autoplay}` : "ring-static"}
+                cx="24"
+                cy="24"
+                r="22.5"
+                fill="none"
+                stroke={ringColor}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                initial={{ pathLength: timer?.autoplay ? 0 : 1 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: timer?.autoplay ? AUTOPLAY_MS / 1000 : 0.2, ease: "linear" }}
+              />
+            </svg>
+          )}
           <button
-            key={p.id}
             type="button"
             role="radio"
             aria-checked={isSelected}
@@ -286,14 +309,9 @@ function ProductSelector({
               e.stopPropagation();
               onSelectProduct(p.id);
             }}
-            style={{
-              backgroundColor: activeSwatchBg,
-              boxShadow: isSelected ? `0 0 0 2px var(--background), 0 0 0 4px ${ringColor}` : undefined,
-            }}
+            style={{ backgroundColor: activeSwatchBg }}
             className={`relative flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full p-1 transition-all duration-300 ${
-              isSelected
-                ? "scale-110 shadow-sm"
-                : "opacity-75 hover:opacity-100 hover:scale-105"
+              isSelected ? "shadow-sm" : "opacity-75 hover:opacity-100 hover:scale-105"
             }`}
           >
             <img
@@ -304,6 +322,7 @@ function ProductSelector({
               className="h-full w-full object-contain pointer-events-none select-none transition-transform duration-300"
             />
           </button>
+          </span>
         );
       })}
     </div>
@@ -327,27 +346,13 @@ function ProductInfoCardItem({
   productSelector?: React.ReactNode;
   features?: React.ReactNode;
 }) {
-  // Bottom bounce trajectory: rises cleanly from bottom (+70px), overshoots slightly, settles to 0px
-  const y = useTransform(progress, (p) => {
-    if (isReducedMotion) return "0px";
-    const d = p - index;
-    const absD = Math.abs(d);
-    if (absD >= 0.5) return "70px";
-    const u = absD / 0.5;
-    const base = 70 * Math.pow(u, 1.35);
-    const wave = Math.sin(Math.PI * Math.min(1, u / 0.40)) * Math.pow(1 - u, 1.3);
-    const overshoot = 16;
-    const yVal = base - overshoot * wave;
-    return `${yVal.toFixed(1)}px`;
-  });
+  // Rises softly from below (+36px) and settles without overshoot
+  const y = useTransform(progress, (p) =>
+    isReducedMotion ? 0 : 36 * Math.pow(phase(p, index), 3),
+  );
 
-  // Non-overlapping opacity window: fades out between 0.25 and 0.45 distance
-  const opacity = useTransform(progress, (p) => {
-    const absD = Math.abs(p - index);
-    if (absD >= 0.45) return 0;
-    if (absD <= 0.25) return 1;
-    return (0.45 - absD) / (0.45 - 0.25);
-  });
+  // Non-overlapping opacity window: outgoing is fully gone at the half-step
+  const opacity = useTransform(progress, (p) => fadeAt(p, index, isReducedMotion));
 
   const pointerEvents = useTransform(progress, (p) => {
     return Math.abs(p - index) <= 0.35 ? "auto" : "none";
@@ -475,27 +480,8 @@ function FloatingAccentsItem({
   isReducedMotion: boolean;
   isActive?: boolean;
 }) {
-  const x = useTransform(progress, (p) => {
-    if (isReducedMotion) return "0px";
-    const d = p - index;
-    const sign = Math.sign(d);
-    const u = Math.abs(d);
-    if (u >= 1) return `${sign * 240}px`;
-    const wave = Math.sin(Math.PI * Math.min(1, u / 0.35)) * Math.pow(1 - u, 1.4);
-    const base = 240 * Math.pow(u, 1.25);
-    const xVal = sign * (base - 40 * wave);
-    return `${xVal.toFixed(1)}px`;
-  });
-
-  const opacity = useTransform(progress, (p) => {
-    if (isReducedMotion) {
-      return Math.abs(p - index) < 0.5 ? 1 : 0;
-    }
-    const absD = Math.abs(p - index);
-    if (absD >= 0.45) return 0;
-    if (absD <= 0.25) return 1;
-    return (0.45 - absD) / (0.45 - 0.25);
-  });
+  const x = useTransform(progress, (p) => driftAt(p, index, 110, isReducedMotion));
+  const opacity = useTransform(progress, (p) => fadeAt(p, index, isReducedMotion));
 
   // Small flower designs rendered in the exact bra color with low opacity
   const flowerColor = slide.braColor;
@@ -589,16 +575,12 @@ export function ProductShowcaseSlider() {
   }, []);
 
   const handleSelectProduct = (newProduct: ShowcaseProductType) => {
-    if (newProduct === selectedProduct) return;
+    if (newProduct === selectedProductRef.current) return;
     markInput();
-    navTokenRef.current++;
-    activeAnimationRef.current?.stop();
-    selectedProductRef.current = newProduct;
-    totalSlidesRef.current = showcaseProductsMap[newProduct].slides.length;
-    setSelectedProduct(newProduct);
-    setCurrentIndex(0);
-    currentIndexRef.current = 0;
-    progress.set(0);
+    // Same fade-through hand-off as moving past the last colour, landing on the first colour.
+    const ids = showcaseProducts.map((p) => p.id);
+    const dir = ids.indexOf(newProduct) > ids.indexOf(selectedProductRef.current) ? 1 : -1;
+    crossToProduct(dir, SLIDE_DURATION, newProduct);
   };
 
   // Synchronize currentIndex from unified progress
@@ -622,11 +604,13 @@ export function ProductShowcaseSlider() {
    * motion, no extra layers mounted, no flash.
    */
   const crossToProduct = useCallback(
-    (dir: 1 | -1, duration: number) => {
+    (dir: 1 | -1, duration: number, targetId?: ShowcaseProductType) => {
       const order = showcaseProducts;
       const from = order.findIndex((p) => p.id === selectedProductRef.current);
-      const next = order[(from + dir + order.length) % order.length]!;
-      const landing = dir > 0 ? 0 : next.slides.length - 1;
+      const next = targetId
+        ? showcaseProductsMap[targetId]
+        : order[(from + dir + order.length) % order.length]!;
+      const landing = targetId || dir > 0 ? 0 : next.slides.length - 1;
       const token = ++navTokenRef.current;
       activeAnimationRef.current?.stop();
 
@@ -642,16 +626,18 @@ export function ProductShowcaseSlider() {
           return;
         }
         progress.set(landing - dir * 0.5);
+        // Ease-out half: picks up at the speed the exit ended with, then settles softly.
         activeAnimationRef.current = animate(progress, landing, {
           duration: duration * 0.55,
-          ease: [0.22, 1, 0.36, 1],
+          ease: [0.3, 0.6, 0.25, 1],
         });
       };
 
       if (isReducedMotion) return swap();
+      // Ease-in half: leaves gently, reaches the (invisible) half-step at speed.
       activeAnimationRef.current = animate(progress, currentIndexRef.current + dir * 0.5, {
         duration: duration * 0.45,
-        ease: [0.4, 0, 1, 1],
+        ease: [0.45, 0.05, 0.7, 0.4],
         onComplete: swap,
       });
     },
@@ -660,10 +646,10 @@ export function ProductShowcaseSlider() {
 
   /** Animate to a slide (dots, arrows, keys, swipes, drags and autoplay all land here). */
   const animateTo = useCallback(
-    (newIndex: number, duration = 0.65) => {
+    (newIndex: number, duration = SLIDE_DURATION) => {
       // Past either end of this product's colours → move on to the neighbouring product.
-      if (newIndex > totalSlidesRef.current - 1) return crossToProduct(1, duration + 0.15);
-      if (newIndex < 0) return crossToProduct(-1, duration + 0.15);
+      if (newIndex > totalSlidesRef.current - 1) return crossToProduct(1, duration + 0.1);
+      if (newIndex < 0) return crossToProduct(-1, duration + 0.1);
       const target = newIndex;
       navTokenRef.current++;
       setCurrentIndex(target);
@@ -672,9 +658,11 @@ export function ProductShowcaseSlider() {
       if (isReducedMotion) {
         progress.set(target);
       } else {
+        // Shorter when resuming from a partial drag, so the release never feels sluggish.
+        const distance = Math.min(1, Math.abs(target - progress.get()));
         activeAnimationRef.current = animate(progress, target, {
-          duration,
-          ease: [0.22, 1, 0.36, 1],
+          duration: Math.max(0.45, duration * distance),
+          ease: [...SLIDE_EASE],
         });
       }
     },
@@ -1063,7 +1051,14 @@ export function ProductShowcaseSlider() {
             progress={progress}
             isReducedMotion={isReducedMotion}
             onExplore={handleExploreClick}
-          productSelector={<ProductSelector selectedProduct={selectedProduct} currentSlide={slide} onSelectProduct={handleSelectProduct} />}
+            productSelector={
+              <ProductSelector
+                selectedProduct={selectedProduct}
+                currentSlide={slide}
+                onSelectProduct={handleSelectProduct}
+                timer={idx === currentIndex ? { autoplay: autoplayActive, key: slide.id } : undefined}
+              />
+            }
             features={<FeatureRow features={FEATURES_BY_PRODUCT[selectedProduct]} color={slide.darkColor} />}
           />
         ))}
