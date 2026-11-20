@@ -41,7 +41,9 @@ import { FEATURES_BY_PRODUCT, FeatureRow } from "@/components/showcase/showcase-
  * category chips all work, and the chips and the rail stay in sync both ways.
  *
  * Garments are drawn at their real-life relative size (a trunk is ~36 cm wide, a
- * panty ~30 cm), so the rail looks natural.
+ * panty ~30 cm), so the rail looks natural. Vests are the exception: true to life they
+ * would dwarf everything else, so they hang just a little larger than the tallest other
+ * garment, and the scale of the rail is set by the other garments alone.
  *
  * Motion (compositor-only: transform + opacity): each hanger's x is a spring whose
  * velocity drives a pendulum sway; side view = rotateY(±80°), front view = 0.
@@ -58,20 +60,23 @@ const SIDE_ANGLE = 80;
 const N = PRODUCTS.length;
 const HALF = Math.floor(N / 2);
 
-/** Real-life width of each garment type (cm, laid flat / hung). */
-const WIDTH_CM: Record<RailCategory, number> = {
+/** Real-life width of each garment type (cm, laid flat / hung). Vests: see VEST_SCALE. */
+const WIDTH_CM: Record<Exclude<RailCategory, "vest">, number> = {
   bra: 34,
   panty: 30,
   print: 30,
   brief: 32,
   trunk: 36,
 };
+/** A vest hangs this much taller than the tallest other garment (when the stage has room). */
+const VEST_SCALE = 1.18;
 const TAGLINE: Record<RailCategory, string> = {
   bra: "Wire-free contour cups in breathable fabric.",
   panty: "Mid-rise hipster with a soft, no-dig waistband.",
   print: "Playful prints on second-skin stretch fabric.",
   brief: "Classic brief with a branded comfort waistband.",
   trunk: "Snug boxer trunk with 4-way stretch.",
+  vest: "Breathable cotton vest with a soft, tag-free finish.",
 };
 const FEATURES = {
   bra: FEATURES_BY_PRODUCT.bra,
@@ -79,14 +84,21 @@ const FEATURES = {
   print: FEATURES_BY_PRODUCT.panty,
   brief: FEATURES_BY_PRODUCT.brief,
   trunk: FEATURES_BY_PRODUCT.boxer,
+  vest: FEATURES_BY_PRODUCT.vest,
 } satisfies Record<RailCategory, unknown>;
-const realSize = (p: Product & { category: RailCategory }) => {
-  const w = WIDTH_CM[p.category];
+const IS_VEST = PRODUCTS.map((p) => p.category === "vest");
+const BASE = PRODUCTS.filter((p) => p.category !== "vest").map((p) => {
+  const w = WIDTH_CM[p.category as Exclude<RailCategory, "vest">];
   return { w, h: (w * p.h) / p.w };
-};
-const REAL = PRODUCTS.map(realSize);
-const MAX_W_CM = Math.max(...REAL.map((s) => s.w));
-const MAX_H_CM = Math.max(...REAL.map((s) => s.h));
+});
+// The rail's scale comes from the non-vest garments only, so adding vests leaves their size untouched.
+const MAX_W_CM = Math.max(...BASE.map((s) => s.w));
+const MAX_H_CM = Math.max(...BASE.map((s) => s.h));
+const VEST_H_CM = MAX_H_CM * VEST_SCALE;
+const REAL = PRODUCTS.map((p) => {
+  if (p.category !== "vest") return BASE.shift()!;
+  return { w: (VEST_H_CM * p.w) / p.h, h: VEST_H_CM };
+});
 const MIN_W_CM = Math.min(...REAL.map((s) => s.w));
 
 const firstIndexOf = (c: RailCategory) => PRODUCTS.findIndex((p) => p.category === c);
@@ -118,14 +130,20 @@ function computeGeo(W: number, H: number): Geo {
   const share = phone ? 0.74 : W / H < 1.05 ? 0.6 : 0.3; // widest garment vs stage width
   const fill = phone ? 1 : 0.78; // share of the free height the tallest garment may use
   const ppc = Math.min(((H - 10 - hangerH - floor) * fill) / MAX_H_CM, (W * share) / MAX_W_CM); // px per cm
-  const sizes = REAL.map((s) => ({ w: s.w * ppc, h: s.h * ppc }));
   const focus = phone ? 1 : W / H < 1.05 ? 1.08 : 1.2;
-  const tallest = (hangerH + MAX_H_CM * ppc) * focus;
+  // Vests grow only as far as the stage allows when selected (never smaller than the tallest other garment).
+  const vestRoom = (H - floor - 8) / focus - hangerH;
+  const vestK = clamp(vestRoom / (VEST_H_CM * ppc), 1 / VEST_SCALE, 1);
+  const sizes = REAL.map((s, i) => {
+    const k = IS_VEST[i] ? vestK : 1;
+    return { w: s.w * ppc * k, h: s.h * ppc * k };
+  });
+  const tallest = (hangerH + Math.max(...sizes.map((s) => s.h))) * focus;
   const railY = clamp((H - floor - tallest) / 2, 8, H * 0.22);
 
   // Side garments are packed tightly, but the loop must always reach past both edges
   // so items wrapping round the back are never seen jumping.
-  const maxW = MAX_W_CM * ppc;
+  const maxW = Math.max(...sizes.map((s) => s.w));
   const margin = maxW * 0.16 + 12;
   let slot = clamp(W * 0.028, 16, 36);
   const gapBase = 6;
@@ -150,12 +168,14 @@ const extraFor = (g: Geo, active: number) => {
  */
 type ClipAnchor = { lx: number; ly: number; rx: number; ry: number };
 
-const NOMINAL_INSET = { bra: 0.16, clip: 0.05 } as const;
+/** "vest": clips sit on the shoulders / straps, well in from the side seams. */
+const NOMINAL_INSET = { bra: 0.16, clip: 0.05, vest: 0.2 } as const;
+type ClipKind = keyof typeof NOMINAL_INSET;
 const anchorCache = new Map<string, ClipAnchor | null>();
 let sampleCanvas: HTMLCanvasElement | null = null;
 
 /** One-off, ~96px-wide alpha scan of a loaded photo (≈ sub-millisecond, cached per image). */
-function measureClipAnchor(img: HTMLImageElement, kind: "clip" | "bra"): ClipAnchor | null {
+function measureClipAnchor(img: HTMLImageElement, kind: ClipKind): ClipAnchor | null {
   try {
     const W = 96;
     const H = Math.max(1, Math.round((W * img.naturalHeight) / img.naturalWidth));
@@ -205,7 +225,7 @@ const runWhenIdle = (fn: () => void) =>
     : window.setTimeout(fn, 60);
 
 /** Clip anchor for a garment photo, measured once after the photo has loaded. */
-function useClipAnchor(src: string, kind: "clip" | "bra") {
+function useClipAnchor(src: string, kind: ClipKind) {
   const [anchor, setAnchor] = useState<ClipAnchor | null>(() => anchorCache.get(src) ?? null);
   const imgRef = useRef<HTMLImageElement>(null);
   const measure = useCallback(() => {
@@ -240,7 +260,7 @@ function Hanger({
   w: number;
   h: number; // hanger height; the garment photo starts at y = h
   garmentH: number; // drawn photo height
-  kind: "clip" | "bra";
+  kind: ClipKind;
   anchor: ClipAnchor | null;
 }) {
   const cx = w / 2;
@@ -329,7 +349,8 @@ const HangerItem = memo(function HangerItem({
   onPick,
 }: ItemProps) {
   const isActive = d === 0;
-  const kind = product.category === "bra" ? "bra" : "clip";
+  const kind: ClipKind =
+    product.category === "bra" ? "bra" : product.category === "vest" ? "vest" : "clip";
   const { anchor, imgRef, onLoad } = useClipAnchor(product.image, kind);
 
   // Position spring → velocity → pendulum sway (garment trails the rail's motion).

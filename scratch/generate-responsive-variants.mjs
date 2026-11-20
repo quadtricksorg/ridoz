@@ -4,7 +4,7 @@
 // Usage: node scratch/generate-responsive-variants.mjs
 //
 //   src/assets/ridoz-logo-160.png             header/footer mark (drawn 32–64 CSS px)
-//   src/assets/logo-{ring,style}-only-520.webp  intro loader artwork (drawn ≤ 250 CSS px)
+//   src/assets/logo-{ring,style}-only-640.webp  intro loader artwork (drawn ≤ 310 CSS px)
 //   src/assets/fabric-{768,1408}.webp           Feature card texture (25% opacity overlay)
 //   src/assets/products/480/<name>.webp         product cut-outs for phone-sized slots
 //   src/assets/products/thumb/<name>.webp       colour-swatch thumbnails (drawn ≤ 44 CSS px)
@@ -24,8 +24,8 @@ await sharp(`${A}/ridoz-logo.png`).resize(160, 160).png({ compressionLevel: 9, p
 
 // Intro loader: ring + "Style" must stay pixel-aligned → identical output size.
 for (const n of ["logo-ring-only", "logo-style-only"]) {
-  const f = `${A}/${n}-520.webp`;
-  await sharp(`${A}/${n}.png`).resize(520, 500, { fit: "fill" }).webp(webp({ quality: 90, alphaQuality: 100 })).toFile(f);
+  const f = `${A}/${n}-640.webp`;
+  await sharp(`${A}/${n}.png`).resize(640, 616, { fit: "fill" }).webp(webp({ quality: 90, alphaQuality: 100 })).toFile(f);
   log(f);
 }
 

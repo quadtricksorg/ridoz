@@ -33,8 +33,10 @@ import trunkBrown from "@/assets/products/trunk-brown.webp";
 import trunkGrey from "@/assets/products/trunk-grey.webp";
 import trunkRust from "@/assets/products/trunk-rust.webp";
 import trunkNavy from "@/assets/products/trunk-navy.webp";
+import vestSleeveless from "@/assets/products/vest-sleeveless.webp";
+import vestHalfSleeve from "@/assets/products/vest-half-sleeve.webp";
 
-export type ProductCategory = "bra" | "panty" | "print" | "brief" | "trunk";
+export type ProductCategory = "bra" | "panty" | "print" | "brief" | "trunk" | "vest";
 export type Gender = "Women" | "Men";
 
 export type Product = {
@@ -84,6 +86,7 @@ export const CATEGORIES: { id: ProductCategory; label: string; gender: Gender }[
   { id: "print", label: "Printed", gender: "Women" },
   { id: "brief", label: "Briefs", gender: "Men" },
   { id: "trunk", label: "Trunks", gender: "Men" },
+  { id: "vest", label: "Vests", gender: "Men" },
 ];
 
 const p = (
@@ -233,6 +236,9 @@ export const PRODUCTS: Product[] = [
   p("trunk-rust", "trunk", "Rust Boxer Trunk", "Rust", "#9a4a22", trunkRust, 800, 597),
   p("trunk-brown", "trunk", "Cocoa Boxer Trunk", "Cocoa", "#5a2e22", trunkBrown, 800, 593),
   p("trunk-grey", "trunk", "Graphite Boxer Trunk", "Graphite", "#6e6e70", trunkGrey, 800, 600),
+
+  p("vest-sleeveless", "vest", "White Sleeveless Vest", "White", "#f3f2ef", vestSleeveless, 486, 800),
+  p("vest-half-sleeve", "vest", "White Half-Sleeve Vest", "White", "#f3f2ef", vestHalfSleeve, 730, 800),
 ];
 
 export const productById = (id: string) => PRODUCTS.find((x) => x.id === id)!;

@@ -41,7 +41,7 @@ export interface ShowcaseSlide {
   isTransparent?: boolean;
 }
 
-export type ShowcaseProductType = "bra" | "boxer" | "panty" | "brief";
+export type ShowcaseProductType = "bra" | "boxer" | "panty" | "brief" | "vest";
 
 export interface ShowcaseProductItem {
   id: ShowcaseProductType;
@@ -88,7 +88,18 @@ function palette(hex: string) {
   };
 }
 
-type SlideCopy = { title: string; tag: string; shortDescription: string; price: string };
+type SlideCopy = { title: string; tag: string; shortDescription: string; price: string } & Partial<
+  Pick<ShowcaseSlide, "bgFrom" | "bgTo" | "darkColor" | "accentColor" | "swatchBg">
+>;
+
+/** White fabric would give a washed-out grey palette, so vests take the burgundy of their chest logo. */
+const VEST_TONES = {
+  bgFrom: "#2c171c",
+  bgTo: "#1d0f13",
+  darkColor: "#7d1430",
+  accentColor: "#c4304f",
+  swatchBg: "#ead7db",
+} as const;
 
 function slide(productId: string, copy: SlideCopy): ShowcaseSlide {
   const prod = productById(productId);
@@ -237,6 +248,23 @@ export const briefSlides: ShowcaseSlide[] = [
   }),
 ];
 
+export const vestSlides: ShowcaseSlide[] = [
+  slide("vest-sleeveless", {
+    title: "CLASSIC",
+    tag: "Breathable Cotton",
+    price: "₹499",
+    shortDescription: "Sleeveless combed-cotton vest with a soft, deep scoop neck.",
+    ...VEST_TONES,
+  }),
+  slide("vest-half-sleeve", {
+    title: "CREW",
+    tag: "Everyday Fit",
+    price: "₹549",
+    shortDescription: "Half-sleeve crew-neck vest that stays smooth under any shirt.",
+    ...VEST_TONES,
+  }),
+];
+
 export const showcaseProducts: ShowcaseProductItem[] = [
   {
     id: "bra",
@@ -274,6 +302,15 @@ export const showcaseProducts: ShowcaseProductItem[] = [
     thumb: briefSlides[0]!.image,
     slides: briefSlides,
   },
+  {
+    id: "vest",
+    name: vestSlides[0]!.productName,
+    label: "Vest",
+    tag: "Men",
+    swatchBg: vestSlides[0]!.swatchBg!,
+    thumb: vestSlides[0]!.image,
+    slides: vestSlides,
+  },
 ];
 
 export const showcaseProductsMap: Record<ShowcaseProductType, ShowcaseProductItem> = {
@@ -281,6 +318,7 @@ export const showcaseProductsMap: Record<ShowcaseProductType, ShowcaseProductIte
   boxer: showcaseProducts[1]!,
   panty: showcaseProducts[2]!,
   brief: showcaseProducts[3]!,
+  vest: showcaseProducts[4]!,
 };
 
 /** Default slides (Bra) for backwards compatibility and tests */
