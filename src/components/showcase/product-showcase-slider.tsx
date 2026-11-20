@@ -981,7 +981,9 @@ export function ProductShowcaseSlider() {
         aria-label="Innerwear Colorway Showcase Slider"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`relative h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+        // `isolate`: the slide layers' z-indexes (up to z-70) stay inside this section,
+        // so they can never paint over the fixed navbar (z-50) while scrolling.
+        className={`relative isolate h-[100svh] min-h-[580px] w-full overflow-hidden select-none bg-transparent touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
           isMouseDragging ? "cursor-grabbing" : "[@media(hover:hover)_and_(pointer:fine)]:cursor-grab"
         }`}
         style={
