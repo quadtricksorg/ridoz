@@ -45,9 +45,9 @@ describe("Shop by collection hanger rail", () => {
     render(<NewArrivals />);
     const lastBra = RAIL_PRODUCTS.map((p) => p.category).lastIndexOf("bra");
     const prev = screen.getByRole("button", { name: /previous product/i });
-    // wrap backwards from the first bra to the last product (Trunks)
+    // wrap backwards from the first bra to the last product (Vests)
     fireEvent.click(prev);
-    expect(selectedChip()).toHaveTextContent("Trunks");
+    expect(selectedChip()).toHaveTextContent("Vests");
     fireEvent.click(screen.getByRole("tab", { name: "Bras" }));
     const next = screen.getByRole("button", { name: /next product/i });
     for (let i = 0; i <= lastBra; i++) fireEvent.click(next);

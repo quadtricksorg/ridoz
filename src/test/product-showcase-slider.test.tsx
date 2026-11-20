@@ -130,16 +130,16 @@ describe("ProductShowcaseSlider Data & Component", () => {
     fireEvent.wheel(carousel, { deltaX: 100 });
     expect(dots[1]).toHaveAttribute("aria-selected", "true");
   });
-  it("defines 4 innerwear products with valid configs and slides", () => {
-    expect(showcaseProducts.length).toBe(4);
+  it("defines 5 innerwear products with valid configs and slides", () => {
+    expect(showcaseProducts.length).toBe(5);
     const ids = showcaseProducts.map((p) => p.id);
-    expect(ids).toEqual(["bra", "boxer", "panty", "brief"]);
+    expect(ids).toEqual(["bra", "boxer", "panty", "brief", "vest"]);
 
     showcaseProducts.forEach((p) => {
       expect(p.label).toBeTruthy();
       expect(p.thumb).toBeTruthy();
       expect(p.swatchBg).toBeTruthy();
-      expect(p.slides.length).toBeGreaterThanOrEqual(5);
+      expect(p.slides.length).toBeGreaterThanOrEqual(p.id === "vest" ? 2 : 5);
     });
   });
 
@@ -188,11 +188,11 @@ describe("ProductShowcaseSlider Data & Component", () => {
     fireEvent.click(screen.getByRole("button", { name: /previous design slide/i }));
 
     await waitFor(() =>
-      expect(screen.getAllByRole("radio", { name: /brief/i })[0]).toHaveAttribute("aria-checked", "true"),
+      expect(screen.getAllByRole("radio", { name: /vest/i })[0]).toHaveAttribute("aria-checked", "true"),
       { timeout: 3000 },
     );
     const dots = screen.getAllByRole("tab");
-    expect(dots.length).toBe(showcaseProductsMap.brief.slides.length);
+    expect(dots.length).toBe(showcaseProductsMap.vest.slides.length);
     expect(dots[dots.length - 1]).toHaveAttribute("aria-selected", "true");
   });
 

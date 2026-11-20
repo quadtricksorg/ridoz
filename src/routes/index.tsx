@@ -27,7 +27,7 @@ import fabric768 from "@/assets/fabric-768.webp";
 import fabric1408 from "@/assets/fabric-1408.webp";
 
 import { IntroLoader } from "@/components/brand/intro-loader";
-import { BrandLogo } from "@/components/brand/brand-logo";
+import { BrandLogo, BrandWordmark } from "@/components/brand/brand-logo";
 import { ProductShowcaseSlider } from "@/components/showcase/product-showcase-slider";
 import { TrioBoxShowcase } from "@/components/showcase/trio-box-showcase";
 
@@ -219,9 +219,7 @@ function Header() {
           >
             <BrandLogo variant="full" size="md" href={null} priority={true} />
           </motion.span>
-          <span className="font-display text-3xl font-bold leading-none tracking-tight text-[#a51538]">
-            RIDOZ
-          </span>
+          <BrandWordmark priority decorative sizes="83px" className="h-6" />
         </a>
         <nav aria-label="Primary" className="hidden gap-5 text-sm font-medium md:flex lg:gap-8">
           {links.map((l) => (

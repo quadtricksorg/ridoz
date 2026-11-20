@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef } from "react";
-// 520×500 copies of the 1024×985 masters (drawn ≤ 250 CSS px); see scratch/generate-responsive-variants.mjs.
-import logoRingOnly from "@/assets/logo-ring-only-520.webp";
-import logoStyleOnly from "@/assets/logo-style-only-520.webp";
+// 640×616 copies of the 1024×985 masters (drawn ≤ 310 CSS px); see scratch/generate-responsive-variants.mjs.
+import logoRingOnly from "@/assets/logo-ring-only-640.webp";
+import logoStyleOnly from "@/assets/logo-style-only-640.webp";
+import { BrandWordmark } from "@/components/brand/brand-logo";
 
 interface IntroLoaderProps {
   onComplete?: () => void;
@@ -109,9 +110,9 @@ export function IntroLoader({ onComplete }: IntroLoaderProps) {
       <div className="relative flex flex-col items-center justify-center">
         {/*
           Circular Ring + Script Typography
-          Refined, elegant scale (~25% smaller than before for luxury proportion)
+          Enlarged on every device (phones ~62% of the viewport width), capped at 310px on desktop
         */}
-        <div className="relative w-[min(48vw,180px)] sm:w-[200px] md:w-[230px] lg:w-[250px] aspect-[1024/985]">
+        <div className="relative w-[min(62vw,240px)] sm:w-[260px] md:w-[290px] lg:w-[310px] aspect-[1024/985]">
           {/*
             SVG Progressive Reveal Mask:
             Sweeps along the exact circular path from the bottom-left opening,
@@ -172,13 +173,16 @@ export function IntroLoader({ onComplete }: IntroLoaderProps) {
         </div>
 
         {/*
-          Phase 3: Bold "RIDOZ" Brand Name Centered Directly Below
-          Enlarged to command visual hierarchy with presence and authority
+          Phase 3: Official "RIDOZ" wordmark centered directly below
         */}
         <div className="ri-name mt-5 sm:mt-6 md:mt-7 flex flex-col items-center">
-          <span className="font-sans text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-[0.32em] sm:tracking-[0.36em] text-[#a51538] uppercase select-none pl-[0.32em] sm:pl-[0.36em]">
-            RIDOZ
-          </span>
+          {/* Sized to balance the ring above (~60% of its width) */}
+          <BrandWordmark
+            priority
+            decorative
+            sizes="(min-width: 1024px) 194px, 166px"
+            className="h-12 lg:h-14"
+          />
         </div>
       </div>
     </div>
