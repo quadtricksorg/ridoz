@@ -143,7 +143,7 @@ describe("ProductShowcaseSlider Data & Component", () => {
     });
   });
 
-  it("renders product category selector and switches slides when clicking another product", () => {
+  it("renders product category selector and switches slides when clicking another product", async () => {
     render(<ProductShowcaseSlider />);
 
     // Product selector should be rendered
@@ -158,13 +158,14 @@ describe("ProductShowcaseSlider Data & Component", () => {
     const boxerButtons = screen.getAllByRole("radio", { name: /boxer/i });
     fireEvent.click(boxerButtons[0]!);
 
-    // Re-query after re-render: Boxer is now active
-    const updatedBoxerButtons = screen.getAllByRole("radio", { name: /boxer/i });
-    expect(updatedBoxerButtons[0]).toHaveAttribute("aria-checked", "true");
+    // The product swaps mid-way through the fade-through hand-off
+    await waitFor(() =>
+      expect(screen.getAllByRole("radio", { name: /boxer/i })[0]).toHaveAttribute("aria-checked", "true"),
+      { timeout: 3000 },
+    );
 
     // Live announcement or active slide should now display Boxer
-    const live = screen.getByText(/showing slide 1 of 5:.*boxer/i);
-    expect(live).toBeInTheDocument();
+    expect(screen.getByText(/showing slide 1 of 5:.*boxer/i)).toBeInTheDocument();
   });
 
   it("moves on to the next product after the last colour instead of rewinding", async () => {

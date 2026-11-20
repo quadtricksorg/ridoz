@@ -28,6 +28,7 @@ import cotton from "@/assets/showcase/trio/cotton.webp";
 import leafShadow from "@/assets/showcase/trio/leaf-shadow.webp";
 import ridozWordmark from "@/assets/showcase/trio/ridoz-wordmark.webp";
 import { CTA_TO_RAIL, goToRail } from "@/lib/shop-links";
+import { useReveal } from "@/components/ui/use-reveal";
 
 /**
  * "The 3-Piece Box" — the RIDOZ Panties window carton on a stone podium.
@@ -143,6 +144,7 @@ export function TrioBoxShowcase() {
   const inView = useInView(sectionRef, { amount: 0.4 });
   const nearView = useInView(sectionRef, { once: true, margin: "600px 0px" });
   const reduceMotion = useReducedMotion();
+  useReveal(sectionRef);
 
   const [boxIdx, setBoxIdx] = useState(0);
   const [active, setActive] = useState(0);
@@ -291,13 +293,13 @@ export function TrioBoxShowcase() {
           <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-2.5 px-5 wide:grid wide:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] wide:grid-rows-[1fr_auto_auto_1fr] wide:gap-x-10 wide:gap-y-0 wide:px-8 lg:px-12">
             {/* Intro */}
             <div ref={introRef} className="shrink-0 wide:col-start-1 wide:row-start-2">
-              <p className="flex items-center gap-3 text-[10.5px] font-semibold uppercase tracking-[0.3em] text-primary sm:text-xs">
+              <p data-reveal-item="" className="flex items-center gap-3 text-[10.5px] font-semibold uppercase tracking-[0.3em] text-primary sm:text-xs">
                 The 3-piece box <span aria-hidden className="h-px w-12 bg-primary/70 sm:w-16" />
               </p>
-              <h2 className="mt-1.5 font-display text-[2.15rem] font-bold leading-[0.95] text-[#2a1216] sm:mt-3 sm:text-6xl lg:text-[4.2rem] wide:[@media(max-height:760px)]:text-[3.4rem]">
+              <h2 data-reveal-item="" style={{ "--reveal-delay": "90ms" } as CSSProperties} className="mt-1.5 font-display text-[2.15rem] font-bold leading-[0.95] text-[#2a1216] sm:mt-3 sm:text-6xl lg:text-[4.2rem] wide:[@media(max-height:760px)]:text-[3.4rem]">
                 Feel the <span className="italic font-semibold text-primary">solace.</span>
               </h2>
-              <p className="mt-2 max-w-md text-[12.5px] leading-snug text-[#3b2a2c] sm:mt-4 sm:text-base sm:leading-relaxed wide:[@media(max-height:760px)]:mt-2.5">
+              <p data-reveal-item="" style={{ "--reveal-delay": "180ms" } as CSSProperties} className="mt-2 max-w-md text-[12.5px] leading-snug text-[#3b2a2c] sm:mt-4 sm:text-base sm:leading-relaxed wide:[@media(max-height:760px)]:mt-2.5">
                 Three <strong className="font-semibold">100%</strong> pure cotton panties in every
                 box, made in India. Hover or tap the box to see each one.
               </p>
@@ -306,8 +308,9 @@ export function TrioBoxShowcase() {
 
             {/* Stage — sized from the space this cell gets */}
             <div
+              data-reveal-item="zoom"
               className="relative -mx-5 flex min-h-0 flex-1 items-center justify-center overflow-hidden [mask-image:linear-gradient(to_bottom,#000_86%,transparent)] wide:[mask-image:none] wide:col-start-2 wide:row-span-4 wide:row-start-1 wide:mx-0 wide:overflow-visible"
-              style={{ containerType: "size" }}
+              style={{ containerType: "size", "--reveal-delay": "120ms" } as CSSProperties}
             >
               <Stage
                 box={box}
@@ -322,6 +325,8 @@ export function TrioBoxShowcase() {
             {/* Details + controls */}
             <div
               ref={controlsRef}
+              data-reveal-item=""
+              style={{ "--reveal-delay": "380ms" } as CSSProperties}
               className="relative z-10 shrink-0 wide:col-start-1 wide:row-start-3 wide:pt-6 wide:[@media(max-height:760px)]:pt-4"
             >
               <ActiveDetails box={box} panty={current} />
@@ -411,7 +416,7 @@ const FEATURE_BORDERS = ["border-r", "border-r", "border-r", ""];
 
 function Features() {
   return (
-    <ul className="mt-3 grid max-w-md grid-cols-4 sm:mt-5 lg:max-w-lg wide:[@media(max-height:760px)]:mt-3">
+    <ul data-reveal-item="" style={{ "--reveal-delay": "270ms" } as CSSProperties} className="mt-3 grid max-w-md grid-cols-4 sm:mt-5 lg:max-w-lg wide:[@media(max-height:760px)]:mt-3">
       {FEATURES.map(({ icon: Icon, label }, i) => (
         <li
           key={i}

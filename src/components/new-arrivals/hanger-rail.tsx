@@ -18,6 +18,7 @@ import {
   useTransform,
   useVelocity,
 } from "framer-motion";
+import { useReveal } from "@/components/ui/use-reveal";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
@@ -532,6 +533,7 @@ export function NewArrivals() {
   const stageRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  useReveal(sectionRef);
   const inView = useInView(sectionRef, { amount: 0.35 });
   // Nearby garments switch to eager loading only once the rail is about a screen away,
   // so they don't compete with the first screen for bandwidth.
@@ -773,7 +775,7 @@ export function NewArrivals() {
 
       {/* Heading + category chips */}
       <div className="mx-auto flex w-full max-w-6xl shrink-0 flex-col gap-2.5 px-5 sm:gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between">
-        <div>
+        <div data-reveal-item="">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary sm:text-xs">
             The Collections
           </p>
@@ -785,6 +787,8 @@ export function NewArrivals() {
           ref={chipsRef}
           role="tablist"
           aria-label="Product categories"
+          data-reveal-item="right"
+          style={{ "--reveal-delay": "150ms" } as CSSProperties}
           className="no-scrollbar -mx-5 flex min-w-0 gap-2 overflow-x-auto px-5 py-1 2xl:mx-0 2xl:px-0"
         >
           {CATEGORIES.map((c) => {
@@ -823,9 +827,11 @@ export function NewArrivals() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        data-reveal-item="zoom"
         className="relative mt-2 min-h-0 flex-1 select-none overflow-hidden outline-none [touch-action:pan-y] sm:mt-3 wide:mt-5"
         style={
           {
+            "--reveal-delay": "200ms",
             contain: "layout paint",
             WebkitMaskImage:
               "linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%)",
@@ -918,7 +924,11 @@ export function NewArrivals() {
 
       {/* Active product card: name, colour, sizes + controls. A card on phones (fills the
           space under the rail); a slim bar between the arrows on larger screens. */}
-      <div className="mx-auto mt-2 w-full max-w-6xl shrink-0 px-4 sm:px-5 wide:mt-3">
+      <div
+        data-reveal-item=""
+        style={{ "--reveal-delay": "380ms" } as CSSProperties}
+        className="mx-auto mt-2 w-full max-w-6xl shrink-0 px-4 sm:px-5 wide:mt-3"
+      >
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2.5 rounded-3xl border border-white/80 bg-[#fdf6f4]/95 px-3 py-3 shadow-[0_14px_36px_-22px_rgba(90,30,50,0.5)] sm:gap-x-3 sm:gap-y-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none [@media(max-height:640px)]:py-2">
           <button
             type="button"

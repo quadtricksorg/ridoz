@@ -287,7 +287,9 @@ export function ShowcaseStage({
 
   // transform + opacity only: both run on the compositor. (Animating width/height
   // forces layout on every frame.)
-  const glide = "transform 600ms cubic-bezier(0.22,1,0.36,1), opacity 500ms ease";
+  // The colour (ribbon tint) transitions too, so shades blend instead of snapping.
+  const glide =
+    "transform 900ms cubic-bezier(0.45,0.05,0.25,1), opacity 800ms cubic-bezier(0.45,0.05,0.25,1), color 800ms ease";
 
   return (
     <div
