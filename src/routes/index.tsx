@@ -63,7 +63,7 @@ export const Route = createFileRoute("/")({
 
 const PHONE = "+91 7510441075";
 const TEL = `tel:${PHONE.replace(/\s/g, "")}`;
-const EMAIL = "faisalcpulakkal@gmail.com";
+const EMAIL = "sales@ridozstyle.com";
 const INSTAGRAM_URL = "https://www.instagram.com/ridoz_style?utm_source=ig_web_button_share_sheet&obrf=ZDNlZDc0MzIxNw==";
 const MAPS_URL = "https://maps.app.goo.gl/dF8pQshLZfj1kH2E6";
 /** Gmail's web composer — what desktops open, and the fallback on phones. */
